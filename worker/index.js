@@ -2,6 +2,18 @@ const DEV_IDS = [59420];
 const ADMIN_RATE_LIMIT = 30;
 const ADMIN_RATE_WINDOW_MS = 60000;
 
+const ROLE_RANK = {
+    user: 0,
+    panel: 1,
+    moderator: 2,
+    admin: 3,
+    dev: 4
+};
+
+function rankOf(role) {
+    return ROLE_RANK[role] || 0;
+}
+
 function logKey() {
     return 'log:' + Date.now() + ':' + Math.random().toString(36).slice(2, 8);
 }
@@ -26,7 +38,8 @@ function migrate(user) {
             user.role = 'user';
         }
     }
-    user.isAdmin = user.role === 'dev' || user.role === 'admin';
+    if (DEV_IDS.includes(user.aisakaId)) user.role = 'dev';
+    user.isAdmin = rankOf(user.role) >= rankOf('admin');
     return user;
 }
 
@@ -99,6 +112,10 @@ function checkDevSecret(request, env) {
     return null;
 }
 
+function requireRank(user, minRole) {
+    return rankOf(user.role) >= rankOf(minRole);
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -122,19 +139,33 @@ export default {
             const aisakaId = parseInt(body.aisakaId, 10);
             const username = String(body.username || '').slice(0, 64);
             if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
+
+            const pendingKey = 'pending_role:' + aisakaId;
+            const pending = await env.NEXUS_KV.get(pendingKey, 'json');
+
             if (user) {
                 user = migrate(user);
+                if (pending && pending.role && !DEV_IDS.includes(user.aisakaId)) {
+                    user.role = pending.role;
+                    user.isAdmin = rankOf(user.role) >= rankOf('admin');
+                    await env.NEXUS_KV.delete(pendingKey);
+                }
                 user = await applyExpiry(env, key, user);
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
                 return json({ ok: true, alreadyClaimed: true, role: user.role, isAdmin: user.isAdmin }, 200, cors);
             }
 
-            const role = roleFor(aisakaId, null);
+            let role = roleFor(aisakaId, null);
+            if (pending && pending.role && !DEV_IDS.includes(aisakaId)) {
+                role = pending.role;
+                await env.NEXUS_KV.delete(pendingKey);
+            }
+
             user = {
                 aisakaId,
                 username,
                 role,
-                isAdmin: role === 'dev' || role === 'admin',
+                isAdmin: rankOf(role) >= rankOf('admin'),
                 firstSeen: Date.now(),
                 lastSeen: Date.now(),
                 banned: false
@@ -171,7 +202,7 @@ export default {
         }
 
         if (url.pathname.startsWith('/admin/')) {
-            if (user.role !== 'dev' && user.role !== 'admin') {
+            if (!requireRank(user, 'panel')) {
                 return json({ error: 'forbidden' }, 403, cors);
             }
 
@@ -181,6 +212,8 @@ export default {
             }
 
             if (url.pathname === '/admin/users' && request.method === 'GET') {
+                if (!requireRank(user, 'moderator')) return json({ error: 'forbidden' }, 403, cors);
+
                 const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 const users = [];
                 for (const k of list.keys) {
@@ -196,8 +229,19 @@ export default {
                 return json({ users }, 200, cors);
             }
 
+            if (url.pathname === '/admin/logs' && request.method === 'GET') {
+                const list = await env.NEXUS_KV.list({ prefix: 'log:' });
+                const logs = [];
+                for (const k of list.keys) {
+                    const l = await env.NEXUS_KV.get(k.name, 'json');
+                    if (l) logs.push(l);
+                }
+                logs.sort((a, b) => b.ts - a.ts);
+                return json({ logs: logs.slice(0, 200) }, 200, cors);
+            }
+
             if (url.pathname === '/admin/tokens' && request.method === 'GET') {
-                if (user.role !== 'dev') return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
                 const secretErr = checkDevSecret(request, env);
                 if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
                 if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
@@ -219,7 +263,7 @@ export default {
             }
 
             if (url.pathname === '/admin/role' && request.method === 'POST') {
-                if (user.role !== 'dev') return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
                 const secretErr = checkDevSecret(request, env);
                 if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
                 if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
@@ -228,9 +272,7 @@ export default {
                 const preview = String(body.tokenPreview || '');
                 const nextRole = String(body.role || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
-                if (nextRole !== 'dev' && nextRole !== 'admin' && nextRole !== 'user') {
-                    return json({ error: 'invalid role' }, 400, cors);
-                }
+                if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
 
                 const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 for (const k of list.keys) {
@@ -238,11 +280,11 @@ export default {
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
                         u = migrate(u);
-                        if (DEV_IDS.includes(u.aisakaId) && nextRole !== 'dev') {
-                            return json({ error: 'cannot demote dev' }, 400, cors);
+                        if (DEV_IDS.includes(u.aisakaId)) {
+                            return json({ error: 'cannot change dev via panel' }, 400, cors);
                         }
                         u.role = nextRole;
-                        u.isAdmin = nextRole === 'dev' || nextRole === 'admin';
+                        u.isAdmin = rankOf(nextRole) >= rankOf('admin');
                         await env.NEXUS_KV.put(k.name, JSON.stringify(u));
                         await logAction(env, {
                             ts: Date.now(),
@@ -256,7 +298,63 @@ export default {
                 return json({ error: 'not found' }, 404, cors);
             }
 
+            if (url.pathname === '/admin/role-by-id' && request.method === 'POST') {
+                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                const secretErr = checkDevSecret(request, env);
+                if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
+                if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
+
+                const body = await request.json();
+                const aisakaId = parseInt(body.aisakaId, 10);
+                const nextRole = String(body.role || '');
+                if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
+                if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
+                if (DEV_IDS.includes(aisakaId)) {
+                    return json({ error: 'cannot change dev via panel' }, 400, cors);
+                }
+
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                let updated = null;
+                for (const k of list.keys) {
+                    let u = await env.NEXUS_KV.get(k.name, 'json');
+                    if (!u) continue;
+                    if (parseInt(u.aisakaId, 10) === aisakaId) {
+                        u = migrate(u);
+                        u.role = nextRole;
+                        u.isAdmin = rankOf(nextRole) >= rankOf('admin');
+                        await env.NEXUS_KV.put(k.name, JSON.stringify(u));
+                        updated = u;
+                        break;
+                    }
+                }
+
+                if (updated) {
+                    await logAction(env, {
+                        ts: Date.now(),
+                        actor: actorOf(user),
+                        action: 'user.role',
+                        meta: (updated.username || String(updated.aisakaId)) + ' → ' + nextRole
+                    });
+                    return json({ ok: true, applied: true, role: nextRole }, 200, cors);
+                }
+
+                await env.NEXUS_KV.put('pending_role:' + aisakaId, JSON.stringify({
+                    role: nextRole,
+                    setAt: Date.now(),
+                    setBy: actorOf(user)
+                }));
+                await logAction(env, {
+                    ts: Date.now(),
+                    actor: actorOf(user),
+                    action: 'user.role.pending',
+                    meta: '#' + aisakaId + ' → ' + nextRole + ' (not claimed yet)'
+                });
+                return json({ ok: true, applied: false, role: nextRole }, 200, cors);
+            }
+
             if (url.pathname === '/admin/announce' && request.method === 'POST') {
+                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const text = String(body.text || '').slice(0, 500);
                 const isTest = !!body.test;
@@ -277,6 +375,8 @@ export default {
             }
 
             if (url.pathname === '/admin/ban' && request.method === 'POST') {
+                if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
@@ -290,9 +390,11 @@ export default {
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
                         u = migrate(u);
-                        if (u.role === 'dev') return json({ error: 'cannot ban dev' }, 400, cors);
-                        if (u.role === 'admin' && user.role !== 'dev') {
+                        if (rankOf(u.role) >= rankOf('admin') && !requireRank(user, 'dev')) {
                             return json({ error: 'cannot ban admin' }, 403, cors);
+                        }
+                        if (DEV_IDS.includes(u.aisakaId)) {
+                            return json({ error: 'cannot ban dev' }, 400, cors);
                         }
                         u.banned = true;
                         if (reason) u.banReason = reason;
@@ -313,6 +415,8 @@ export default {
             }
 
             if (url.pathname === '/admin/unban' && request.method === 'POST') {
+                if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
@@ -339,18 +443,9 @@ export default {
                 return json({ error: 'not found' }, 404, cors);
             }
 
-            if (url.pathname === '/admin/logs' && request.method === 'GET') {
-                const list = await env.NEXUS_KV.list({ prefix: 'log:' });
-                const logs = [];
-                for (const k of list.keys) {
-                    const l = await env.NEXUS_KV.get(k.name, 'json');
-                    if (l) logs.push(l);
-                }
-                logs.sort((a, b) => b.ts - a.ts);
-                return json({ logs: logs.slice(0, 200) }, 200, cors);
-            }
-
             if (url.pathname === '/admin/config' && request.method === 'POST') {
+                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const current = (await env.NEXUS_KV.get('config', 'json')) || {};
                 const next = { ...current, ...body };
@@ -374,7 +469,7 @@ function publicUser(u) {
         aisakaId: u.aisakaId,
         username: u.username,
         role: u.role || (u.isAdmin ? 'admin' : 'user'),
-        isAdmin: u.role === 'dev' || u.role === 'admin',
+        isAdmin: rankOf(u.role) >= rankOf('admin'),
         banned: !!u.banned,
         banReason: u.banReason || null,
         banExpiresAt: u.banExpiresAt || null,
