@@ -15,7 +15,7 @@
 <h2>Installation</h2>
 
 <p>1. Install <a href="https://www.tampermonkey.net/">Tampermonkey</a> or <a href="https://violentmonkey.github.io/">Violentmonkey</a><br>
-2. Click <a href="https://raw.githubusercontent.com/zykieboi/custom-userscripts/main/main.user.js">here</a> to install or update</p>
+2. Click <a href="https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js">here</a> to install or update</p>
 
 <p>Tampermonkey checks for updates automatically. If you want to force one, either open the Tampermonkey dashboard and press <strong>Check for updates</strong> on the userscript or click the <strong>Installation link</strong> to update.</p>
 
