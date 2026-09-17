@@ -8,6 +8,8 @@
     var HASH = '#nexus-admin';
     var SEARCH_API = '/search/users/results';
 
+    var ROLE_RANK = { user: 0, panel: 1, moderator: 2, admin: 3, dev: 4 };
+
     var FEATURES = [
         { key: 'removeAds', label: 'Remove Ads', desc: 'Hides all advertisement banners and skyscrapers across the site.' },
         { key: 'hideAlert', label: 'Hide Alert', desc: 'Hides the alert banner under the navigation bar.' },
@@ -39,6 +41,8 @@
         '.nxp-tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px;margin-left:8px;vertical-align:middle}',
         '.nxp-tag.dev{background:#7a4ce0;color:#fff}',
         '.nxp-tag.admin{background:#0a84ff;color:#fff}',
+        '.nxp-tag.moderator{background:#0a84ff;color:#fff;opacity:0.75}',
+        '.nxp-tag.panel{background:#4a4d50;color:#e0e0e0}',
         '.nxp-tag.banned{background:#e5484d;color:#fff}',
         '.nxp-tag.ok{background:#2a6b3a;color:#d6f5dd}',
         '.nxp-tag.warn{background:#6b5a2a;color:#f5e5c0}',
@@ -93,7 +97,8 @@
         '.nxp-search .nxp-input{flex:1}',
         '.nxp-hits{background:#1a1c1e;border:1px solid #2f3133;border-radius:8px;padding:8px 14px;margin-bottom:16px}',
         '.nxp-hit{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #2a2c2e;gap:12px}',
-        '.nxp-hit:last-child{border-bottom:0}'
+        '.nxp-hit:last-child{border-bottom:0}',
+        '.nxp-role-row{display:grid;grid-template-columns:1fr 200px auto;gap:12px;align-items:end;margin-bottom:20px}'
     ].join('');
 
     var S = {
@@ -121,7 +126,11 @@
         banHours: '',
         tokens: null,
         tokensLoading: false,
-        tokensError: null
+        tokensError: null,
+        roleIdInput: '',
+        roleSelectValue: 'admin',
+        roleSubmitting: false,
+        roleLastResult: null
     };
 
     function el(tag, props) {
@@ -197,7 +206,9 @@
         return { status: 0, data: res };
     }
 
+    function rankOf(role) { return ROLE_RANK[role] || 0; }
     function isDev() { return S.role === 'dev'; }
+    function can(role) { return rankOf(S.role) >= rankOf(role); }
 
     function render() {
         ensureStyle();
@@ -220,22 +231,26 @@
         var head = el('div', { class: 'nxp-head' });
         var titleWrap = el('div', {});
         titleWrap.appendChild(el('h1', { class: 'nxp-title' }, 'Nexus Panel'));
-        titleWrap.appendChild(el('div', { class: 'nxp-sub' },
-            S.role === 'dev' ? 'Signed in as Developer.' : 'Signed in as Admin.'));
+        var roleLabel = S.role ? ('Signed in as ' + S.role + '.') : 'Loading…';
+        titleWrap.appendChild(el('div', { class: 'nxp-sub' }, roleLabel));
         head.appendChild(titleWrap);
         head.appendChild(el('a', { class: 'nxp-back', href: '/home' }, '← Back to site'));
         shell.appendChild(head);
 
         var tabs = el('div', { class: 'nxp-tabs' });
-        var tabList = [
-            ['overview', 'Overview'],
-            ['users', 'Users'],
-            ['logs', 'Logs'],
-            ['features', 'Features'],
-            ['config', 'Config'],
-            ['announce', 'Announcement']
-        ];
+        var tabList = [['overview', 'Overview']];
+        if (can('panel')) tabList.push(['logs', 'Logs']);
+        if (can('moderator')) tabList.push(['users', 'Users']);
+        if (isDev()) tabList.push(['features', 'Features']);
+        if (isDev()) tabList.push(['config', 'Config']);
+        if (isDev()) tabList.push(['announce', 'Announcement']);
+        if (isDev()) tabList.push(['admins', 'Admins']);
         if (isDev()) tabList.push(['tokens', 'Tokens']);
+
+        if (tabList.map(function(t) { return t[0]; }).indexOf(S.tab) === -1) {
+            S.tab = 'overview';
+        }
+
         tabList.forEach(function(t) {
             tabs.appendChild(el('button', {
                 class: 'nxp-tab' + (S.tab === t[0] ? ' active' : ''),
@@ -244,6 +259,7 @@
                     S.selectedUser = null;
                     clearFeedback();
                     if (t[0] === 'logs' && !S.logs && !S.logsLoading) loadLogs();
+                    if (t[0] === 'users' && !S.users && !S.loading) loadUsers();
                     if (t[0] === 'features' && !S.config && !S.configLoading) loadConfig();
                     if (t[0] === 'config' && !S.config && !S.configLoading) loadConfig();
                     if (t[0] === 'announce' && !S.serverState && !S.serverStateLoading) loadServerState();
@@ -256,11 +272,12 @@
 
         var panel = el('div', { class: 'nxp-panel' });
         if (S.tab === 'overview') panel.appendChild(renderOverview());
-        else if (S.tab === 'users') panel.appendChild(renderUsers());
-        else if (S.tab === 'logs') panel.appendChild(renderLogs());
-        else if (S.tab === 'features') panel.appendChild(renderFeatures());
-        else if (S.tab === 'config') panel.appendChild(renderConfig());
-        else if (S.tab === 'announce') panel.appendChild(renderAnnounce());
+        else if (S.tab === 'logs' && can('panel')) panel.appendChild(renderLogs());
+        else if (S.tab === 'users' && can('moderator')) panel.appendChild(renderUsers());
+        else if (S.tab === 'features' && isDev()) panel.appendChild(renderFeatures());
+        else if (S.tab === 'config' && isDev()) panel.appendChild(renderConfig());
+        else if (S.tab === 'announce' && isDev()) panel.appendChild(renderAnnounce());
+        else if (S.tab === 'admins' && isDev()) panel.appendChild(renderAdmins());
         else if (S.tab === 'tokens' && isDev()) panel.appendChild(renderTokens());
         shell.appendChild(panel);
 
@@ -277,6 +294,8 @@
     function roleTag(role) {
         if (role === 'dev') return el('span', { class: 'nxp-tag dev' }, 'DEV');
         if (role === 'admin') return el('span', { class: 'nxp-tag admin' }, 'ADMIN');
+        if (role === 'moderator') return el('span', { class: 'nxp-tag moderator' }, 'MOD');
+        if (role === 'panel') return el('span', { class: 'nxp-tag panel' }, 'PANEL');
         return null;
     }
 
@@ -287,10 +306,10 @@
         var stats = el('div', { class: 'nxp-stat-row' });
 
         var total = S.users ? S.users.length : 0;
-        var devs = S.users ? S.users.filter(function(u) { return u.role === 'dev'; }).length : 0;
+        var admins = S.users ? S.users.filter(function(u) { return u.role === 'dev' || u.role === 'admin'; }).length : 0;
         var banned = S.users ? S.users.filter(function(u) { return u.banned; }).length : 0;
 
-        [['Total users', total], ['Devs', devs], ['Banned', banned]].forEach(function(s) {
+        [['Total users', total], ['Admins', admins], ['Banned', banned]].forEach(function(s) {
             var card = el('div', { class: 'nxp-stat' });
             card.appendChild(el('div', { class: 'nxp-stat-label' }, s[0]));
             card.appendChild(el('div', { class: 'nxp-stat-value' }, String(s[1])));
@@ -331,7 +350,6 @@
             grid.appendChild(el('div', { class: 'nxp-detail-val' }, v == null || v === '' ? '—' : String(v)));
         }
         addRow('Username', u.username || u.Name);
-        if (u.DisplayName && u.DisplayName !== (u.username || u.Name)) addRow('Display name', u.DisplayName);
         addRow('Aisaka ID', u.aisakaId || u.UserId);
         addRow('Role', u.role || 'user');
         if (u.tokenPreview) addRow('Token preview', u.tokenPreview);
@@ -350,7 +368,7 @@
             var roleRow = el('div', { class: 'nxp-toggle' });
             var roleInfo = el('div', { class: 'nxp-toggle-info' });
             roleInfo.appendChild(el('div', { class: 'nxp-name' }, 'Assign role'));
-            roleInfo.appendChild(el('div', { class: 'nxp-meta' }, 'Dev can manage roles. Admin cannot.'));
+            roleInfo.appendChild(el('div', { class: 'nxp-meta' }, 'Dev only.'));
             roleRow.appendChild(roleInfo);
 
             var sel = el('select', {
@@ -362,7 +380,7 @@
                         var res = normaliseRes(raw);
                         if (res.status === 200 && res.data && res.data.ok) {
                             u.role = res.data.role;
-                            u.isAdmin = u.role === 'dev' || u.role === 'admin';
+                            u.isAdmin = rankOf(u.role) >= rankOf('admin');
                             setFeedback(true, 'Role updated to ' + u.role);
                             loadUsers();
                         } else {
@@ -371,7 +389,7 @@
                     }).catch(function(err) { setFeedback(false, err.message); });
                 }
             });
-            ['user', 'admin', 'dev'].forEach(function(r) {
+            ['user', 'panel', 'moderator', 'admin', 'dev'].forEach(function(r) {
                 var o = el('option', { value: r }, r);
                 if ((u.role || 'user') === r) o.selected = true;
                 sel.appendChild(o);
@@ -382,74 +400,76 @@
 
         var actions = el('div', { class: 'nxp-btn-group', style: 'margin-top:24px' });
 
-        if (u.banned) {
-            actions.appendChild(el('button', {
-                class: 'nxp-btn primary',
-                onclick: function() {
-                    if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
-                    callServer('adminUnban', [u.tokenPreview]).then(function(raw) {
-                        var res = normaliseRes(raw);
-                        if (res.status === 200 && res.data && res.data.ok) {
-                            setFeedback(true, 'Unbanned ' + (u.username || u.Name));
-                            S.selectedUser = null;
-                            loadUsers();
-                        } else {
-                            setFeedback(false, (res.data && res.data.error) || 'Failed');
+        if (can('admin')) {
+            if (u.banned) {
+                actions.appendChild(el('button', {
+                    class: 'nxp-btn primary',
+                    onclick: function() {
+                        if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
+                        callServer('adminUnban', [u.tokenPreview]).then(function(raw) {
+                            var res = normaliseRes(raw);
+                            if (res.status === 200 && res.data && res.data.ok) {
+                                setFeedback(true, 'Unbanned ' + (u.username || u.Name));
+                                S.selectedUser = null;
+                                loadUsers();
+                            } else {
+                                setFeedback(false, (res.data && res.data.error) || 'Failed');
+                            }
+                        }).catch(function(e) { setFeedback(false, e.message); });
+                    }
+                }, 'Unban'));
+            } else {
+                var canBan = !(rankOf(u.role) >= rankOf('admin') && !isDev());
+                if (canBan) {
+                    wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:24px' }, 'Ban options'));
+
+                    var reasonField = el('div', { class: 'nxp-field' });
+                    reasonField.appendChild(el('div', { class: 'nxp-field-label' }, 'Reason'));
+                    reasonField.appendChild(el('input', {
+                        class: 'nxp-input',
+                        type: 'text',
+                        placeholder: 'Optional reason',
+                        value: S.banReason || '',
+                        oninput: function(e) { S.banReason = e.currentTarget.value; }
+                    }));
+                    wrap.appendChild(reasonField);
+
+                    var hoursField = el('div', { class: 'nxp-field' });
+                    hoursField.appendChild(el('div', { class: 'nxp-field-label' }, 'Expires in (hours, blank = permanent)'));
+                    hoursField.appendChild(el('input', {
+                        class: 'nxp-input',
+                        type: 'number',
+                        min: '1',
+                        placeholder: 'e.g. 24',
+                        value: S.banHours || '',
+                        oninput: function(e) { S.banHours = e.currentTarget.value; }
+                    }));
+                    wrap.appendChild(hoursField);
+
+                    actions.appendChild(el('button', {
+                        class: 'nxp-btn danger',
+                        onclick: function() {
+                            if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
+                            var payload = {};
+                            if (S.banReason) payload.reason = S.banReason;
+                            var h = parseFloat(S.banHours);
+                            if (!isNaN(h) && h > 0) payload.expiresAt = Date.now() + h * 3600000;
+                            callServer('adminBan', [u.tokenPreview, payload]).then(function(raw) {
+                                var res = normaliseRes(raw);
+                                if (res.status === 200 && res.data && res.data.ok) {
+                                    setFeedback(true, 'Banned ' + (u.username || u.Name));
+                                    S.banReason = '';
+                                    S.banHours = '';
+                                    S.selectedUser = null;
+                                    loadUsers();
+                                } else {
+                                    setFeedback(false, (res.data && res.data.error) || 'Failed');
+                                }
+                            }).catch(function(e) { setFeedback(false, e.message); });
                         }
-                    }).catch(function(e) { setFeedback(false, e.message); });
+                    }, 'Ban user'));
                 }
-            }, 'Unban'));
-        } else {
-            var canBan = u.role !== 'dev' && (isDev() || u.role !== 'admin');
-            wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:24px' }, 'Ban options'));
-
-            var reasonField = el('div', { class: 'nxp-field' });
-            reasonField.appendChild(el('div', { class: 'nxp-field-label' }, 'Reason'));
-            reasonField.appendChild(el('input', {
-                class: 'nxp-input',
-                type: 'text',
-                placeholder: 'Optional reason',
-                value: S.banReason || '',
-                oninput: function(e) { S.banReason = e.currentTarget.value; }
-            }));
-            wrap.appendChild(reasonField);
-
-            var hoursField = el('div', { class: 'nxp-field' });
-            hoursField.appendChild(el('div', { class: 'nxp-field-label' }, 'Expires in (hours, blank = permanent)'));
-            hoursField.appendChild(el('input', {
-                class: 'nxp-input',
-                type: 'number',
-                min: '1',
-                placeholder: 'e.g. 24',
-                value: S.banHours || '',
-                oninput: function(e) { S.banHours = e.currentTarget.value; }
-            }));
-            wrap.appendChild(hoursField);
-
-            actions.appendChild(el('button', {
-                class: 'nxp-btn danger',
-                disabled: !canBan,
-                onclick: function() {
-                    if (!canBan) return;
-                    if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
-                    var payload = {};
-                    if (S.banReason) payload.reason = S.banReason;
-                    var h = parseFloat(S.banHours);
-                    if (!isNaN(h) && h > 0) payload.expiresAt = Date.now() + h * 3600000;
-                    callServer('adminBan', [u.tokenPreview, payload]).then(function(raw) {
-                        var res = normaliseRes(raw);
-                        if (res.status === 200 && res.data && res.data.ok) {
-                            setFeedback(true, 'Banned ' + (u.username || u.Name));
-                            S.banReason = '';
-                            S.banHours = '';
-                            S.selectedUser = null;
-                            loadUsers();
-                        } else {
-                            setFeedback(false, (res.data && res.data.error) || 'Failed');
-                        }
-                    }).catch(function(e) { setFeedback(false, e.message); });
-                }
-            }, 'Ban user'));
+            }
         }
 
         actions.appendChild(el('button', {
@@ -546,25 +566,27 @@
                 onclick: function() { S.selectedUser = u; S.banReason = ''; S.banHours = ''; clearFeedback(); render(); }
             }, 'View'));
 
-            var canBan = u.role !== 'dev' && (isDev() || u.role !== 'admin');
-            actions.appendChild(el('button', {
-                class: 'nxp-btn ' + (u.banned ? 'primary' : 'danger'),
-                disabled: !u.banned && !canBan,
-                onclick: function() {
-                    if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
-                    var fn = u.banned ? 'adminUnban' : 'adminBan';
-                    var args = u.banned ? [u.tokenPreview] : [u.tokenPreview, {}];
-                    callServer(fn, args).then(function(raw) {
-                        var res = normaliseRes(raw);
-                        if (res.status === 200 && res.data && res.data.ok) {
-                            setFeedback(true, (u.banned ? 'Unbanned ' : 'Banned ') + u.username);
-                            loadUsers();
-                        } else {
-                            setFeedback(false, (res.data && res.data.error) || 'Failed');
-                        }
-                    }).catch(function(e) { setFeedback(false, e.message); });
-                }
-            }, u.banned ? 'Unban' : 'Ban'));
+            if (can('admin')) {
+                var canBan = !(rankOf(u.role) >= rankOf('admin') && !isDev());
+                actions.appendChild(el('button', {
+                    class: 'nxp-btn ' + (u.banned ? 'primary' : 'danger'),
+                    disabled: !u.banned && !canBan,
+                    onclick: function() {
+                        if (!u.tokenPreview) { setFeedback(false, 'No token preview for this user.'); return; }
+                        var fn = u.banned ? 'adminUnban' : 'adminBan';
+                        var args = u.banned ? [u.tokenPreview] : [u.tokenPreview, {}];
+                        callServer(fn, args).then(function(raw) {
+                            var res = normaliseRes(raw);
+                            if (res.status === 200 && res.data && res.data.ok) {
+                                setFeedback(true, (u.banned ? 'Unbanned ' : 'Banned ') + u.username);
+                                loadUsers();
+                            } else {
+                                setFeedback(false, (res.data && res.data.error) || 'Failed');
+                            }
+                        }).catch(function(e) { setFeedback(false, e.message); });
+                    }
+                }, u.banned ? 'Unban' : 'Ban'));
+            }
             row.appendChild(actions);
             wrap.appendChild(row);
         });
@@ -710,7 +732,7 @@
         var maintRow = el('div', { class: 'nxp-toggle' });
         var maintInfo = el('div', { class: 'nxp-toggle-info' });
         maintInfo.appendChild(el('div', { class: 'nxp-name' }, 'Put Nexus into maintenance'));
-        maintInfo.appendChild(el('div', { class: 'nxp-meta' }, 'When ON, non-admin Nexus users see a fullscreen overlay.'));
+        maintInfo.appendChild(el('div', { class: 'nxp-meta' }, 'When ON, non-dev Nexus users see a fullscreen overlay.'));
         maintRow.appendChild(maintInfo);
 
         var maintOn = config.maintenance === true;
@@ -866,6 +888,86 @@
         return wrap;
     }
 
+    function renderAdmins() {
+        var wrap = el('div', {});
+
+        wrap.appendChild(el('div', { class: 'nxp-section-title' }, 'Assign role by Aisaka ID'));
+        wrap.appendChild(el('div', { class: 'nxp-sub', style: 'margin-bottom:16px' },
+            'Works for claimed and unclaimed users. If the user has not opened Nexus yet, the role is stored and applied on their first claim. The dev (source-code) cannot be changed here.'));
+
+        var row = el('div', { class: 'nxp-role-row' });
+
+        var idField = el('div', { class: 'nxp-field' });
+        idField.appendChild(el('div', { class: 'nxp-field-label' }, 'Aisaka ID'));
+        idField.appendChild(el('input', {
+            class: 'nxp-input',
+            type: 'text',
+            placeholder: 'e.g. 12345',
+            value: S.roleIdInput || '',
+            oninput: function(e) { S.roleIdInput = e.currentTarget.value; }
+        }));
+        row.appendChild(idField);
+
+        var roleField = el('div', { class: 'nxp-field' });
+        roleField.appendChild(el('div', { class: 'nxp-field-label' }, 'Role'));
+        var sel = el('select', {
+            class: 'nxp-select',
+            onchange: function(e) { S.roleSelectValue = e.currentTarget.value; }
+        });
+        ['user', 'panel', 'moderator', 'admin', 'dev'].forEach(function(r) {
+            var o = el('option', { value: r }, r);
+            if (S.roleSelectValue === r) o.selected = true;
+            sel.appendChild(o);
+        });
+        roleField.appendChild(sel);
+        row.appendChild(roleField);
+
+        var applyWrap = el('div', { class: 'nxp-field' });
+        applyWrap.appendChild(el('div', { class: 'nxp-field-label' }, '\u00a0'));
+        applyWrap.appendChild(el('button', {
+            class: 'nxp-btn primary',
+            disabled: S.roleSubmitting,
+            onclick: function() {
+                var id = parseInt(S.roleIdInput, 10);
+                if (!id) { setFeedback(false, 'Enter a valid Aisaka ID.'); return; }
+                S.roleSubmitting = true;
+                render();
+                callServer('adminRoleById', [id, S.roleSelectValue]).then(function(raw) {
+                    S.roleSubmitting = false;
+                    var res = normaliseRes(raw);
+                    if (res.status === 200 && res.data && res.data.ok) {
+                        S.roleLastResult = { id: id, role: res.data.role, applied: !!res.data.applied };
+                        setFeedback(true, res.data.applied
+                            ? ('Updated #' + id + ' → ' + res.data.role)
+                            : ('Pending: #' + id + ' → ' + res.data.role + ' (applies on first claim)'));
+                        S.roleIdInput = '';
+                        loadUsers();
+                    } else {
+                        setFeedback(false, (res.data && res.data.error) || 'Failed');
+                    }
+                }).catch(function(err) {
+                    S.roleSubmitting = false;
+                    setFeedback(false, err.message);
+                });
+            }
+        }, S.roleSubmitting ? 'Applying…' : 'Apply'));
+        row.appendChild(applyWrap);
+
+        wrap.appendChild(row);
+
+        if (S.roleLastResult) {
+            wrap.appendChild(el('div', { class: 'nxp-status-box' },
+                el('div', { class: 'nxp-status-line' },
+                    el('span', { class: 'nxp-tag ' + (S.roleLastResult.applied ? 'ok' : 'warn') },
+                        S.roleLastResult.applied ? 'APPLIED' : 'PENDING'),
+                    document.createTextNode(' #' + S.roleLastResult.id + ' → ' + S.roleLastResult.role)
+                )
+            ));
+        }
+
+        return wrap;
+    }
+
     function renderTokens() {
         var wrap = el('div', {});
 
@@ -1006,32 +1108,20 @@
                 ? window.NX.getMeName()
                 : '';
 
-            callServer('claim', [meId, meName]).then(function(raw) {
-                var res = normaliseRes(raw);
-                if (res.status === 200 && res.data) {
-                    if (res.data.role) S.role = res.data.role;
-                    else if (res.data.isAdmin) S.role = 'admin';
-                }
-                if (!S.role) {
-                    callServer('me').then(function(raw2) {
-                        var r2 = normaliseRes(raw2);
-                        if (r2.status === 200 && r2.data && r2.data.user) {
-                            S.role = r2.data.user.role || (r2.data.user.isAdmin ? 'admin' : 'user');
-                        }
-                        render();
-                        loadUsers();
-                        loadConfig();
-                        loadServerState();
-                    }).catch(function(e) {
-                        S.error = e.message || 'Could not reach server.';
-                        render();
-                    });
-                    return;
-                }
-                render();
-                loadUsers();
-                loadConfig();
-                loadServerState();
+            callServer('claim', [meId, meName]).then(function() {
+                callServer('me').then(function(raw) {
+                    var res = normaliseRes(raw);
+                    if (res.status === 200 && res.data && res.data.user) {
+                        S.role = res.data.user.role || (res.data.user.isAdmin ? 'admin' : 'user');
+                        window.NX.role = S.role;
+                    }
+                    render();
+                    loadLogs();
+                    if (can('moderator')) loadUsers();
+                }).catch(function(e) {
+                    S.error = e.message || 'Could not reach server.';
+                    render();
+                });
             }).catch(function(e) {
                 S.error = e.message || 'Could not reach server.';
                 render();
