@@ -1,10 +1,10 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.2
+// @version      1.0.3
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
-// @description  Testing stuff :)
+// @description  Extension for Aisaka!
 // @match        https://www.aisaka.me/*
 // @match        aisaka.me/*
 // @grant        GM_setValue
