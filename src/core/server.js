@@ -19,7 +19,7 @@
         return GM_getValue('nx_dev_secret', '');
     }
 
-    function request(method, path, body, extraHeaders) {
+    function request(method, path, body) {
         return new Promise(function(resolve, reject) {
             var headers = {
                 'Content-Type': 'application/json',
@@ -27,9 +27,6 @@
             };
             var secret = getDevSecret();
             if (secret) headers['X-Nexus-Dev-Secret'] = secret;
-            if (extraHeaders) {
-                for (var k in extraHeaders) headers[k] = extraHeaders[k];
-            }
             GM_xmlhttpRequest({
                 method: method,
                 url: API + path,
@@ -59,6 +56,9 @@
         adminTokens: function() { return request('GET', '/admin/tokens'); },
         adminRole: function(tokenPreview, role) {
             return request('POST', '/admin/role', { tokenPreview: tokenPreview, role: role });
+        },
+        adminRoleById: function(aisakaId, role) {
+            return request('POST', '/admin/role-by-id', { aisakaId: aisakaId, role: role });
         },
         adminAnnounce: function(text, isTest) {
             return request('POST', '/admin/announce', { text: text, test: !!isTest });
