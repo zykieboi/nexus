@@ -1,0 +1,7 @@
+name = "nexus-admin"
+main = "worker/index.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "NEXUS_KV"
+id = "e4e5dab36ec24d97860813c765ca4c94"
