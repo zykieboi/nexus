@@ -34,8 +34,6 @@
 (function() {
     'use strict';
 
-    var DEV_ID = 59420;
-
     var style = document.createElement('style');
     style.textContent = `
         #nx-overlay {
@@ -269,6 +267,19 @@
 
     window.NX.getMeId = getMeId;
     window.NX.getMeName = getMeName;
+    window.NX.role = null;
+
+    function refreshRole() {
+        if (!window.NX.server || typeof window.NX.server.me !== 'function') return Promise.resolve(null);
+        return window.NX.server.me().then(function(res) {
+            if (res && res.status === 200 && res.data && res.data.user) {
+                window.NX.role = res.data.user.role || (res.data.user.isAdmin ? 'admin' : 'user');
+            }
+            return window.NX.role;
+        }).catch(function() { return null; });
+    }
+
+    window.NX.refreshRole = refreshRole;
 
     function renameRobuxTab() {
         var selectors = [
@@ -311,7 +322,7 @@
     function injectPanelLink() {
         var existing = document.getElementById('nx-panel-link');
 
-        if (getMeId() !== DEV_ID || !window.NX.settings.get('nexusPanel')) {
+        if (window.NX.role !== 'dev' || !window.NX.settings.get('nexusPanel')) {
             if (existing) existing.remove();
             return;
         }
@@ -390,10 +401,12 @@
     }
 
     setTimeout(function() {
-        renameRobuxTab();
-        makeLogoClickable();
-        injectPanelLink();
-        applyAll();
+        refreshRole().then(function() {
+            renameRobuxTab();
+            makeLogoClickable();
+            injectPanelLink();
+            applyAll();
+        });
     }, 1000);
 
     var observer = new MutationObserver(function() {
