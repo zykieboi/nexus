@@ -4,6 +4,31 @@
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
+    var STYLE_ID = 'nx-rap-style';
+
+    function formatRap(n) {
+        n = Number(n) || 0;
+        if (n < 1000) return String(n);
+        if (n < 1000000) {
+            var k = n / 1000;
+            var s = k >= 100 ? Math.round(k).toString() : k.toFixed(1).replace(/\.0$/, '');
+            return s + 'K';
+        }
+        var m = n / 1000000;
+        var s2 = m >= 100 ? Math.round(m).toString() : m.toFixed(2).replace(/\.?0+$/, '');
+        return s2 + 'M';
+    }
+
+    function ensureStyle() {
+        if (document.getElementById(STYLE_ID)) return;
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent =
+            '.nx-rap-stat{max-width:110px!important;min-width:0!important;overflow:hidden}' +
+            '.nx-rap-stat [class*="statValue-"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}';
+        document.head.appendChild(s);
+    }
+
     window.NX.features.rap = {
         apply: function() {
             if (document.querySelector('.nx-rap-stat')) return;
@@ -49,6 +74,9 @@
                     var match = html.match(/Total RAP:[\s\S]{0,200}?([\d,]+)/i);
                     if (!match) return;
 
+                    var raw = parseInt(match[1].replace(/,/g, ''), 10);
+                    if (!raw && raw !== 0) return;
+
                     var wrapper = followingCol.cloneNode(true);
                     wrapper.classList.add('nx-rap-stat');
 
@@ -59,11 +87,12 @@
                         valueEl.innerHTML = '';
                         var link = document.createElement('a');
                         link.href = '/internal/limiteds?userId=' + userId;
-                        link.textContent = match[1];
+                        link.textContent = formatRap(raw);
                         valueEl.appendChild(link);
                     }
                     if (headerEl) headerEl.textContent = 'RAP';
 
+                    ensureStyle();
                     followingCol.parentElement.insertBefore(wrapper, followingCol.nextSibling);
                 })
                 .catch(function() {
