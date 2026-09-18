@@ -4,6 +4,11 @@
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
+    function isDarkTheme() {
+        try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
+        catch (e) { return false; }
+    }
+
     window.NX.features.bulkUnfriend = {
         apply: function() {
             var container = document.querySelector('.friendsContainer-0-2-204, [class*="friendsContainer-"]');
@@ -30,6 +35,12 @@
                 return;
             }
 
+            var dark = isDarkTheme();
+            var counterColor = dark ? '#9a9da0' : '#666';
+            var secondaryBtn = dark ? '#3a3d40' : '#e1e4e8';
+            var secondaryBtnHover = dark ? '#4a4d50' : '#d0d4d8';
+            var secondaryBtnText = dark ? '#e0e0e0' : '#232527';
+
             cards.forEach(function(card) {
                 if (card.querySelector('.nx-friend-checkbox')) return;
                 var cb = document.createElement('input');
@@ -42,22 +53,28 @@
 
             var toolbar = document.createElement('div');
             toolbar.className = 'nx-bulk-toolbar';
-            toolbar.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 10px 0; margin-bottom: 10px;';
+            toolbar.style.cssText = 'display: flex; align-items: center; gap: 12px; padding: 10px 0; margin-bottom: 10px; flex-wrap: wrap;';
 
             var selectAll = document.createElement('button');
             selectAll.textContent = 'Select All';
-            selectAll.style.cssText = 'padding: 6px 14px; background: #0066ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;';
+            selectAll.style.cssText = 'padding: 6px 14px; background: #00a2ff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit;';
+            selectAll.onmouseenter = function() { selectAll.style.background = '#32b5ff'; };
+            selectAll.onmouseleave = function() { selectAll.style.background = '#00a2ff'; };
 
             var deselectAll = document.createElement('button');
             deselectAll.textContent = 'Deselect All';
-            deselectAll.style.cssText = 'padding: 6px 14px; background: #555; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;';
+            deselectAll.style.cssText = 'padding: 6px 14px; background: ' + secondaryBtn + '; color: ' + secondaryBtnText + '; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-family: inherit;';
+            deselectAll.onmouseenter = function() { deselectAll.style.background = secondaryBtnHover; };
+            deselectAll.onmouseleave = function() { deselectAll.style.background = secondaryBtn; };
 
             var unfriendBtn = document.createElement('button');
             unfriendBtn.textContent = 'Unfriend Selected';
-            unfriendBtn.style.cssText = 'padding: 6px 14px; background: #d9534f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: auto;';
+            unfriendBtn.style.cssText = 'padding: 6px 14px; background: #d9534f; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; margin-left: auto; font-family: inherit;';
+            unfriendBtn.onmouseenter = function() { unfriendBtn.style.background = '#e26460'; };
+            unfriendBtn.onmouseleave = function() { unfriendBtn.style.background = '#d9534f'; };
 
             var counter = document.createElement('span');
-            counter.style.cssText = 'font-size: 13px; color: #999;';
+            counter.style.cssText = 'font-size: 13px; color: ' + counterColor + ';';
             counter.textContent = '0 selected';
 
             function updateCount() {
