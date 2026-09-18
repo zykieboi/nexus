@@ -4,21 +4,12 @@
     window.NX = window.NX || {};
     window.NX.ui = window.NX.ui || {};
 
-    var DEV_ID = 59420;
-
-    function getMeId() {
-        if (window.NX && typeof window.NX.getMeId === 'function') {
-            return window.NX.getMeId();
-        }
-        return parseInt(localStorage.getItem('nx_me_id') || '0', 10);
-    }
-
     window.NX.ui.modal = {
         build: function() {
             var existing = document.getElementById('nx-overlay');
             if (existing) existing.remove();
 
-            var isDev = getMeId() === DEV_ID;
+            var isDev = window.NX.role === 'dev';
 
             var overlay = document.createElement('div');
             overlay.id = 'nx-overlay';
@@ -89,6 +80,11 @@
                     cat: 'function',
                     label: '2020 Trade Theme',
                     desc: 'Replaces the default trade list and window with the 2020 Roblox layout.'
+                },
+                explorer: {
+                    cat: 'function',
+                    label: 'Explorer',
+                    desc: 'View the instance tree of any catalog asset.'
                 },
                 removeAds: {
                     cat: 'performance',
