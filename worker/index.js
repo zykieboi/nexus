@@ -174,17 +174,16 @@ export default {
                 isAdmin: rankOf(role) >= rankOf('admin'),
                 firstSeen: Date.now(),
                 lastSeen: Date.now(),
-                banned: false
+                banned: false,
+                lastDailyLog: 0
             };
             await env.NEXUS_KV.put(key, JSON.stringify(user));
 
-            const preview = key.slice(5, 19) + '…';
             await logAction(env, {
                 ts: Date.now(),
                 actor: 'system',
                 action: 'user.claim',
-                meta: username + ' #' + aisakaId + ' [' + role + '] ' + preview,
-                discord: false
+                meta: username + ' #' + aisakaId + ' [' + role + ']'
             });
 
             return json({ ok: true, claimed: true, role, isAdmin: user.isAdmin }, 200, cors);
@@ -198,6 +197,17 @@ export default {
         if (user.banned) return json({ error: 'banned' }, 403, cors);
 
         user.lastSeen = Date.now();
+
+        if (!user.lastDailyLog || Date.now() - user.lastDailyLog > 86400000) {
+            user.lastDailyLog = Date.now();
+            await logAction(env, {
+                ts: Date.now(),
+                actor: 'system',
+                action: 'user.active',
+                meta: user.username + ' #' + user.aisakaId
+            });
+        }
+
         await env.NEXUS_KV.put(key, JSON.stringify(user));
 
         if (url.pathname === '/me') {
