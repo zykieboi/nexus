@@ -4,7 +4,7 @@
 // @version      1.0.3
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
-// @description  Extension for Aisaka!
+// @description  Testing stuff :)
 // @match        https://www.aisaka.me/*
 // @match        aisaka.me/*
 // @grant        GM_setValue
@@ -12,6 +12,11 @@
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @connect      nexus-admin.masonreed-exe.workers.dev
+// @connect      www.aisaka.me
+// @connect      aisaka.me
+// @connect      assetdelivery.aisaka.me
+// @connect      clscdn.lol
+// @connect      raw.githubusercontent.com
 // @run-at       document-end
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js
@@ -397,6 +402,7 @@
         if (window.NX.settings.get('bulkUnfriend')) window.NX.features.bulkUnfriend.apply();
         if (window.NX.settings.get('trade2020')) window.NX.features.trade2020.apply();
         if (window.NX.features.offsale) window.NX.features.offsale.apply();
+        if (window.NX.settings.get('explorer')) window.NX.features.explorer.apply();
         if (window.NX.settings.get('nexusPanel')) window.NX.features.nexusPanel.apply();
         if (window.NX.features.announcement) window.NX.features.announcement.apply();
     }
