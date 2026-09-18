@@ -23,6 +23,7 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/trade-2020.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/offsale.js
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/gate.js
