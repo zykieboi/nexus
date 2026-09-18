@@ -4,10 +4,65 @@
     window.NX = window.NX || {};
     window.NX.ui = window.NX.ui || {};
 
+    var STYLE_ID = 'nx-modal-theme-style';
+
+    function isDarkTheme() {
+        try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
+        catch (e) { return false; }
+    }
+
+    function ensureThemeStyle() {
+        var old = document.getElementById(STYLE_ID);
+        if (old) old.remove();
+        var dark = isDarkTheme();
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        if (dark) {
+            s.textContent = [
+                '#nx-modal{background:#232527;color:#e0e0e0;border:1px solid #343638}',
+                '#nx-modal .nx-header{border-bottom:1px solid #343638}',
+                '#nx-modal h2{color:#fff}',
+                '#nx-modal .sub{color:#7a7d80}',
+                '#nx-modal .close{color:#6a6d70}',
+                '#nx-modal .close:hover{color:#fff}',
+                '#nx-modal .nx-content::-webkit-scrollbar-thumb{background:#3a3d40}',
+                '#nx-modal .nx-content::-webkit-scrollbar-thumb:hover{background:#4a4d50}',
+                '.nx-cat{color:#7a7d80;border-bottom:1px solid #2f3133}',
+                '.nx-row:hover{background:#2a2c2e}',
+                '.nx-row-text .nx-label{color:#e8e8e8}',
+                '.nx-row-text .nx-desc{color:#85888b}',
+                '.nx-toggle .slider{background:#3d4043}',
+                '.nx-toggle .slider::before{background:#c8cacc}',
+                '#nx-modal .nx-footer{border-top:1px solid #343638}'
+            ].join('');
+        } else {
+            s.textContent = [
+                '#nx-modal{background:#ffffff;color:#232527;border:1px solid #c7cbce}',
+                '#nx-modal .nx-header{border-bottom:1px solid #e1e4e8}',
+                '#nx-modal h2{color:#232527}',
+                '#nx-modal .sub{color:#7a7d80}',
+                '#nx-modal .close{color:#6a6d70}',
+                '#nx-modal .close:hover{color:#000}',
+                '#nx-modal .nx-content::-webkit-scrollbar-thumb{background:#c7cbce}',
+                '#nx-modal .nx-content::-webkit-scrollbar-thumb:hover{background:#b0b5ba}',
+                '.nx-cat{color:#7a7d80;border-bottom:1px solid #e1e4e8}',
+                '.nx-row:hover{background:#f2f4f5}',
+                '.nx-row-text .nx-label{color:#232527}',
+                '.nx-row-text .nx-desc{color:#7a7d80}',
+                '.nx-toggle .slider{background:#c7cbce}',
+                '.nx-toggle .slider::before{background:#ffffff}',
+                '#nx-modal .nx-footer{border-top:1px solid #e1e4e8}'
+            ].join('');
+        }
+        document.head.appendChild(s);
+    }
+
     window.NX.ui.modal = {
         build: function() {
             var existing = document.getElementById('nx-overlay');
             if (existing) existing.remove();
+
+            ensureThemeStyle();
 
             var isDev = window.NX.role === 'dev';
 
