@@ -27,7 +27,7 @@
             '.nx-rap-stat{min-width:0!important;flex-shrink:0}' +
             '.nx-rap-stat [class*="statValue-"]{white-space:nowrap}' +
             '.nx-rap-stat ~ .col-6{flex:0 0 auto!important;width:auto!important;padding-left:8px!important;padding-right:8px!important}' +
-            '.nx-rap-stat ~ [class*="offset-lg-2"]{margin-left:auto!important}';
+            '.nx-rap-stat ~ [class*="offset-lg-2"]{margin-left:120px!important}';
         document.head.appendChild(s);
     }
 
