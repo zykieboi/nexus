@@ -74,20 +74,20 @@ async function applyExpiry(env, key, user) {
     delete user.banReason;
     delete user.banExpiresAt;
     await env.NEXUS_KV.put(key, JSON.stringify(user));
-    const entry = {
+    await logAction(env, {
         ts: Date.now(),
         actor: 'system',
         action: 'user.unban',
         meta: (user.username || String(user.aisakaId)) + ' (expired)'
-    };
-    await env.NEXUS_KV.put(logKey(), JSON.stringify(entry));
-    await sendDiscord(env, entry);
+    });
     return user;
 }
 
 async function logAction(env, entry) {
     await env.NEXUS_KV.put(logKey(), JSON.stringify(entry));
-    await sendDiscord(env, entry);
+    if (entry.discord !== false) {
+        await sendDiscord(env, entry);
+    }
 }
 
 async function sendDiscord(env, entry) {
@@ -149,6 +149,12 @@ export default {
                     user.role = pending.role;
                     user.isAdmin = rankOf(user.role) >= rankOf('admin');
                     await env.NEXUS_KV.delete(pendingKey);
+                    await logAction(env, {
+                        ts: Date.now(),
+                        actor: 'system',
+                        action: 'user.role.pending-applied',
+                        meta: (user.username || String(user.aisakaId)) + ' → ' + user.role
+                    });
                 }
                 user = await applyExpiry(env, key, user);
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
@@ -171,6 +177,16 @@ export default {
                 banned: false
             };
             await env.NEXUS_KV.put(key, JSON.stringify(user));
+
+            const preview = key.slice(5, 19) + '…';
+            await logAction(env, {
+                ts: Date.now(),
+                actor: 'system',
+                action: 'user.claim',
+                meta: username + ' #' + aisakaId + ' [' + role + '] ' + preview,
+                discord: false
+            });
+
             return json({ ok: true, claimed: true, role, isAdmin: user.isAdmin }, 200, cors);
         }
 
