@@ -24,8 +24,10 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent =
-            '.nx-rap-stat{max-width:110px!important;min-width:0!important;overflow:hidden}' +
-            '.nx-rap-stat [class*="statValue-"]{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}';
+            '.nx-rap-stat{min-width:0!important;flex-shrink:0}' +
+            '.nx-rap-stat [class*="statValue-"]{white-space:nowrap}' +
+            '.nx-rap-stat ~ .col-6.col-lg-2{flex:0 0 auto!important;width:auto!important;padding-left:8px!important;padding-right:8px!important}' +
+            '.nx-rap-stat ~ [class*="offset-lg-2"]{margin-left:0!important}';
         document.head.appendChild(s);
     }
 
