@@ -20,7 +20,8 @@
         scale: 'nx_bg_scale',
         locked: 'nx_bg_locked',
         px: 'nx_bg_panel_x',
-        py: 'nx_bg_panel_y'
+        py: 'nx_bg_panel_y',
+        pmin: 'nx_bg_panel_min'
     };
 
     function isDarkTheme() {
@@ -50,15 +51,20 @@
     function getY() { return num(KEY.y, 0); }
     function getScale() { return Math.max(0.3, Math.min(3, num(KEY.scale, 1))); }
     function isLocked() { return get(KEY.locked, false) === true; }
+    function isPanelMinimized() { return get(KEY.pmin, false) === true; }
 
     function getPanelX() {
         var v = get(KEY.px, null);
-        return v === null || v === '' ? null : parseFloat(v);
+        if (v === null || v === '') return null;
+        var n = parseFloat(v);
+        return isNaN(n) ? null : n;
     }
 
     function getPanelY() {
         var v = get(KEY.py, null);
-        return v === null || v === '' ? null : parseFloat(v);
+        if (v === null || v === '') return null;
+        var n = parseFloat(v);
+        return isNaN(n) ? null : n;
     }
 
     function detectType(url) {
@@ -201,8 +207,7 @@
         var s = document.createElement('style');
         s.id = PANEL_CSS_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:280px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);transition:none;user-select:none;}',
-            '#' + PANEL_ID + '.nxbg-dragging{transition:none;}',
+            '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:280px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);user-select:none;}',
             '#' + PANEL_ID + ' .nxbg-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;cursor:grab;padding:2px 0;}',
             '#' + PANEL_ID + ' .nxbg-head:active{cursor:grabbing;}',
             '#' + PANEL_ID + ' .nxbg-min{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
@@ -220,6 +225,8 @@
             '#' + PANEL_ID + ' button.nxbg-apply:hover{background:#0a76e0;}',
             '#' + PANEL_ID + ' button.nxbg-clear{background:transparent;color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;}',
             '#' + PANEL_ID + ' button.nxbg-clear:hover{background:' + (dark ? '#2a2c2e' : '#e8eef5') + ';}',
+            '#' + PANEL_ID + '.nxbg-collapsed{padding:6px 10px;}',
+            '#' + PANEL_ID + '.nxbg-collapsed .nxbg-head{margin-bottom:0;}',
             '#' + PANEL_ID + '.nxbg-collapsed .nxbg-body{display:none;}',
             '#' + PANEL_ID + ' .nxbg-hint{color:' + muted + ';font-size:10px;margin-top:6px;line-height:1.4;}'
         ].join('');
@@ -241,6 +248,12 @@
         return { x: newX, y: newY };
     }
 
+    function savePanelPosition(panel) {
+        var rect = panel.getBoundingClientRect();
+        set(KEY.px, Math.round(rect.left));
+        set(KEY.py, Math.round(rect.top));
+    }
+
     function applyPanelPosition(panel) {
         var x = getPanelX();
         var y = getPanelY();
@@ -256,7 +269,10 @@
         panel.style.right = 'auto';
         panel.style.bottom = 'auto';
         requestAnimationFrame(function() {
-            clampPanelPosition(panel);
+            var clamped = clampPanelPosition(panel);
+            if (clamped.x !== x || clamped.y !== y) {
+                savePanelPosition(panel);
+            }
         });
     }
 
@@ -274,7 +290,6 @@
             var rect = panel.getBoundingClientRect();
             offsetX = e.clientX - rect.left;
             offsetY = e.clientY - rect.top;
-            panel.classList.add('nxbg-dragging');
             e.preventDefault();
         });
 
@@ -291,10 +306,8 @@
         document.addEventListener('mouseup', function() {
             if (!dragging) return;
             dragging = false;
-            panel.classList.remove('nxbg-dragging');
-            var clamped = clampPanelPosition(panel);
-            set(KEY.px, clamped.x);
-            set(KEY.py, clamped.y);
+            clampPanelPosition(panel);
+            savePanelPosition(panel);
         });
     }
 
@@ -303,8 +316,11 @@
         if (old) old.remove();
         ensurePanelStyle();
 
+        var minimized = isPanelMinimized();
+
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
+        if (minimized) panel.classList.add('nxbg-collapsed');
 
         var head = document.createElement('div');
         head.className = 'nxbg-head';
@@ -314,16 +330,18 @@
 
         var min = document.createElement('button');
         min.className = 'nxbg-min';
-        min.textContent = '\u2013';
-        min.title = 'Minimize';
+        min.textContent = minimized ? '+' : '\u2013';
+        min.title = minimized ? 'Expand' : 'Minimize';
         min.onclick = function(e) {
             e.stopPropagation();
+            var nowMin = !panel.classList.contains('nxbg-collapsed');
             panel.classList.toggle('nxbg-collapsed');
-            min.textContent = panel.classList.contains('nxbg-collapsed') ? '+' : '\u2013';
+            min.textContent = nowMin ? '+' : '\u2013';
+            min.title = nowMin ? 'Expand' : 'Minimize';
+            set(KEY.pmin, nowMin);
             requestAnimationFrame(function() {
-                var clamped = clampPanelPosition(panel);
-                if (getPanelX() !== null) set(KEY.px, clamped.x);
-                if (getPanelY() !== null) set(KEY.py, clamped.y);
+                clampPanelPosition(panel);
+                savePanelPosition(panel);
             });
         };
 
@@ -504,7 +522,7 @@
 
         var hint = document.createElement('div');
         hint.className = 'nxbg-hint';
-        hint.textContent = 'Drag this panel by its title bar to move it.';
+        hint.textContent = 'Drag this panel by its title bar. Position and size are saved.';
         body.appendChild(hint);
 
         panel.appendChild(body);
@@ -512,6 +530,12 @@
 
         applyPanelPosition(panel);
         attachPanelDrag(panel);
+
+        window.addEventListener('resize', function() {
+            if (!document.getElementById(PANEL_ID)) return;
+            clampPanelPosition(panel);
+            savePanelPosition(panel);
+        });
     }
 
     function rebuild() {
