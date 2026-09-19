@@ -15,12 +15,10 @@ const IP_RATE_LIMIT = 120;
 const IP_RATE_WINDOW_MS = 60000;
 const GLOBAL_RATE_LIMIT = 3000;
 const GLOBAL_RATE_WINDOW_MS = 60000;
-const CLAIM_PER_IP_LIMIT = 25;          // raised from 5 — shared NAT was throttling users
+const CLAIM_PER_IP_LIMIT = 25;
 const CLAIM_PER_IP_WINDOW_MS = 600000;
 const MAX_TOKENS_PER_IP = 25;
 
-// Note: removed the empty-string pattern (was blocking privacy browsers) and
-// added a few more bots. The empty UA case is now handled in badUserAgent().
 const BAD_UA_PATTERNS = [
     /curl/i, /wget/i, /python-requests/i, /python-urllib/i, /scrapy/i,
     /libwww-perl/i, /go-http-client/i, /java\//i, /okhttp/i, /axios\//i,
@@ -115,9 +113,8 @@ async function incrTokensFromIp(env, ip) {
 }
 
 function badUserAgent(ua) {
-    // Missing UA is suspicious, but we only reject if it's missing AND the
-    // request is not coming from a browser-ish origin. Keep it simple:
-    // allow empty UA (privacy browsers), block known bot strings.
+    // Empty UA is allowed — privacy browsers send it, and blocking them was
+    // silently dropping legitimate users.
     if (!ua) return false;
     for (const re of BAD_UA_PATTERNS) if (re.test(ua)) return true;
     return false;
@@ -151,8 +148,6 @@ async function logSecurity(env, entry) {
             meta: entry.meta
         }));
     } catch (e) {}
-    // Don't double-post to Discord; logAction handles that for user-facing actions.
-    // Security events still get Discord via sendDiscord directly here.
     await sendDiscord(env, {
         ts: Date.now(),
         actor: 'security',
@@ -211,6 +206,19 @@ function requireRank(user, minRole) {
     return rankOf(user.role) >= rankOf(minRole);
 }
 
+// Paginate a KV list() call — list() returns at most 1000 keys per page and
+// truncates silently if you don't loop on list_complete.
+async function listAllKeys(env, prefix) {
+    const keys = [];
+    let cursor = undefined;
+    do {
+        const page = await env.NEXUS_KV.list({ prefix, cursor });
+        for (const k of page.keys) keys.push(k);
+        cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+    return keys;
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -255,7 +263,6 @@ export default {
 
         const token = request.headers.get('x-nexus-token');
 
-        // Diagnostic: log every /claim attempt with its token state before validation
         if (url.pathname === '/claim' && request.method === 'POST') {
             console.log('claim-attempt', {
                 ip,
@@ -325,6 +332,21 @@ export default {
                     });
                 }
                 user = await applyExpiry(env, key, user);
+                user.lastSeen = Date.now();
+
+                // Log repeat claims for everyone (dev included), throttled to
+                // once per 24h so page loads don't flood the log.
+                if (!user.lastClaimLog || Date.now() - user.lastClaimLog > 86400000) {
+                    user.lastClaimLog = Date.now();
+                    await logAction(env, {
+                        ts: Date.now(),
+                        actor: 'system',
+                        action: 'user.claim.repeat',
+                        meta: (user.username || String(user.aisakaId)) + ' #' + user.aisakaId +
+                              (DEV_IDS.includes(user.aisakaId) ? ' [dev]' : '')
+                    });
+                }
+
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
                 console.log('claim-existing', { aisakaId: user.aisakaId, role: user.role });
                 return json({ ok: true, alreadyClaimed: true, role: user.role, isAdmin: user.isAdmin }, 200, cors);
@@ -345,6 +367,7 @@ export default {
                 lastSeen: Date.now(),
                 banned: false,
                 lastDailyLog: 0,
+                lastClaimLog: Date.now(),
                 firstIp: ip
             };
             await env.NEXUS_KV.put(key, JSON.stringify(user));
@@ -356,7 +379,8 @@ export default {
                 ts: Date.now(),
                 actor: 'system',
                 action: 'user.claim',
-                meta: username + ' #' + aisakaId + ' [' + role + ']'
+                meta: username + ' #' + aisakaId + ' [' + role + ']' +
+                      (DEV_IDS.includes(aisakaId) ? ' [dev]' : '')
             });
 
             return json({ ok: true, claimed: true, role, isAdmin: user.isAdmin }, 200, cors);
@@ -377,7 +401,8 @@ export default {
                 ts: Date.now(),
                 actor: 'system',
                 action: 'user.active',
-                meta: user.username + ' #' + user.aisakaId
+                meta: user.username + ' #' + user.aisakaId +
+                      (DEV_IDS.includes(user.aisakaId) ? ' [dev]' : '')
             });
         }
 
@@ -406,13 +431,12 @@ export default {
 
             if (url.pathname === '/admin/users' && request.method === 'GET') {
                 if (!requireRank(user, 'moderator')) return json({ error: 'forbidden' }, 403, cors);
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                const keys = await listAllKeys(env, 'user:');
                 const users = [];
-                for (const k of list.keys) {
+                for (const k of keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     u = migrate(u);
-                    // Only persist expiry cleanup; don't rewrite on every list.
                     if (isExpired(u)) {
                         u = await applyExpiry(env, k.name, u);
                     }
@@ -425,14 +449,14 @@ export default {
             }
 
             if (url.pathname === '/admin/logs' && request.method === 'GET') {
-                const list = await env.NEXUS_KV.list({ prefix: 'log:' });
+                const keys = await listAllKeys(env, 'log:');
                 const logs = [];
-                for (const k of list.keys) {
+                for (const k of keys) {
                     const l = await env.NEXUS_KV.get(k.name, 'json');
                     if (l) logs.push(l);
                 }
                 logs.sort((a, b) => b.ts - a.ts);
-                return json({ logs: logs.slice(0, 200) }, 200, cors);
+                return json({ logs: logs.slice(0, 500) }, 200, cors);
             }
 
             if (url.pathname === '/admin/tokens' && request.method === 'GET') {
@@ -441,9 +465,9 @@ export default {
                 if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
                 if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
 
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                const keys = await listAllKeys(env, 'user:');
                 const tokens = [];
-                for (const k of list.keys) {
+                for (const k of keys) {
                     const u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     tokens.push({
@@ -469,8 +493,8 @@ export default {
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
                 if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
 
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
-                for (const k of list.keys) {
+                const keys = await listAllKeys(env, 'user:');
+                for (const k of keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
@@ -504,9 +528,9 @@ export default {
                 if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
                 if (DEV_IDS.includes(aisakaId)) return json({ error: 'cannot change dev via panel' }, 400, cors);
 
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                const keys = await listAllKeys(env, 'user:');
                 let updated = null;
-                for (const k of list.keys) {
+                for (const k of keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (parseInt(u.aisakaId, 10) === aisakaId) {
@@ -573,8 +597,8 @@ export default {
                 const reason = body.reason ? String(body.reason).slice(0, 200) : null;
                 const expiresAt = body.expiresAt ? parseInt(body.expiresAt, 10) : null;
 
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
-                for (const k of list.keys) {
+                const keys = await listAllKeys(env, 'user:');
+                for (const k of keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
@@ -607,8 +631,8 @@ export default {
                 const preview = String(body.tokenPreview || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
 
-                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
-                for (const k of list.keys) {
+                const keys = await listAllKeys(env, 'user:');
+                for (const k of keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
