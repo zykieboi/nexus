@@ -18,7 +18,10 @@
         { key: 'inventorySearch', label: 'Inventory Search', desc: 'Adds a search bar to your inventory so you can filter items by name.' },
         { key: 'bulkUnfriend', label: 'Bulk Unfriend', desc: 'Select multiple friends and remove them all at once from the friends page.' },
         { key: 'trade2020', label: '2020 Trade Theme', desc: 'Replaces the default trade list and window with the 2020 Roblox layout.' },
-        { key: 'explorer', label: 'Explorer', desc: 'View the instance tree of any catalog asset.' }
+        { key: 'explorer', label: 'Explorer', desc: 'View the instance tree of any catalog asset.' },
+        { key: 'customBackground', label: 'Custom Background', desc: 'Replaces the site background with an image chosen by the user.' },
+        { key: 'customLogo', label: 'Custom Logo', desc: 'Replaces the navbar logo with an image chosen by the user.' },
+        { key: 'roundedCorners', label: 'Rounded Corners', desc: 'Rounds cards, buttons, and inputs across the site.' }
     ];
 
     var BASE_CSS = [
@@ -28,6 +31,7 @@
         '.nxp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px}',
         '.nxp-title{font-size:26px;font-weight:600;margin:0}',
         '.nxp-sub{font-size:13px;margin-top:4px}',
+        '.nxp-head-actions{display:flex;gap:8px;align-items:center}',
         '.nxp-back{border-radius:6px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none !important}',
         '.nxp-tabs{display:flex;gap:4px;margin-bottom:20px;flex-wrap:wrap}',
         '.nxp-tab{background:transparent;border:0;font-size:14px;font-weight:500;padding:8px 14px;border-radius:6px;cursor:pointer;font-family:inherit}',
@@ -62,14 +66,15 @@
         '.nxp-feedback{margin-top:14px;font-size:13px;padding:10px 12px;border-radius:6px}',
         '.nxp-feedback.ok{color:#3ecf5a;background:rgba(62,207,90,0.08);border:1px solid rgba(62,207,90,0.3)}',
         '.nxp-feedback.err{color:#e5484d;background:rgba(229,72,77,0.08);border:1px solid rgba(229,72,77,0.3)}',
-        '.nxp-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}',
+        '.nxp-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}',
         '.nxp-stat{border-radius:8px;padding:14px}',
         '.nxp-stat-label{font-size:11px;text-transform:uppercase;letter-spacing:0.6px;font-weight:600}',
         '.nxp-stat-value{font-size:24px;font-weight:600;margin-top:6px}',
         '.nxp-section-title{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.7px;margin:0 0 12px}',
         '.nxp-detail-grid{display:grid;grid-template-columns:160px 1fr;gap:8px 16px;margin-top:8px}',
         '.nxp-detail-key{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;padding-top:2px}',
-        '.nxp-detail-val{font-size:13px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}',
+        '.nxp-detail-val{font-size:13px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;display:flex;align-items:center;gap:6px}',
+        '.nxp-copy-btn{background:transparent;border:1px solid;border-radius:3px;padding:1px 6px;font-size:10px;cursor:pointer;font-family:inherit;font-weight:600}',
         '.nxp-log{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;padding:8px 0;word-break:break-all;line-height:1.5}',
         '.nxp-log:last-child{border-bottom:0}',
         '.nxp-toggle{display:flex;align-items:center;gap:10px;padding:12px 0}',
@@ -90,12 +95,21 @@
         '.nxp-feature-desc{font-size:12px;margin-top:3px}',
         '.nxp-field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}',
         '.nxp-field-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}',
-        '.nxp-search{display:flex;gap:8px;margin-bottom:16px}',
-        '.nxp-search .nxp-input{flex:1}',
+        '.nxp-search{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}',
+        '.nxp-search .nxp-input{flex:1;min-width:180px}',
         '.nxp-hits{border-radius:8px;padding:8px 14px;margin-bottom:16px}',
         '.nxp-hit{display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:12px}',
         '.nxp-hit:last-child{border-bottom:0}',
-        '.nxp-role-row{display:grid;grid-template-columns:1fr 200px auto;gap:12px;align-items:end;margin-bottom:20px}'
+        '.nxp-role-row{display:grid;grid-template-columns:1fr 200px auto;gap:12px;align-items:end;margin-bottom:20px}',
+        '.nxp-checkbox{width:16px;height:16px;flex-shrink:0;cursor:pointer;margin-right:10px}',
+        '.nxp-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}',
+        '.nxp-toolbar .nxp-select{padding:6px 10px;font-size:12px}',
+        '.nxp-chip{padding:5px 12px;font-size:12px;border-radius:20px;cursor:pointer;font-family:inherit;border:1px solid}',
+        '.nxp-chip.active{border-color:#0a84ff;background:#0a84ff;color:#fff}',
+        '.nxp-bulk-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:16px}',
+        '.nxp-bulk-count{font-size:13px;font-weight:600}',
+        '.nxp-preview{border-radius:8px;padding:12px 48px 12px 16px;font-size:15px;text-align:center;position:relative;margin-top:12px}',
+        '.nxp-lookup-result{margin-top:8px;font-size:12px}'
     ].join('');
 
     function buildThemeCss(dark) {
@@ -114,7 +128,6 @@
                 '.nxp-row{border-bottom:1px solid #2a2c2e}',
                 '.nxp-name{color:#e8e8e8}',
                 '.nxp-meta{color:#7a7d80}',
-                '.nxp-tag.panel{background:#4a4d50;color:#e0e0e0}',
                 '.nxp-btn{background:#2a2c2e;color:#d5d7d9;border:1px solid #3a3d40}',
                 '.nxp-btn:hover{background:#333538;color:#fff}',
                 '.nxp-input{background:#1a1c1e;color:#e0e0e0;border:1px solid #3a3d40}',
@@ -127,6 +140,8 @@
                 '.nxp-section-title{color:#7a7d80}',
                 '.nxp-detail-key{color:#7a7d80}',
                 '.nxp-detail-val{color:#e0e0e0}',
+                '.nxp-copy-btn{border-color:#3a3d40;color:#9a9da0}',
+                '.nxp-copy-btn:hover{background:#2a2c2e;color:#fff}',
                 '.nxp-log{color:#c8cbcd;border-bottom:1px solid #2a2c2e}',
                 '.nxp-log-time{color:#7a7d80;margin-right:10px}',
                 '.nxp-toggle{border-bottom:1px solid #2a2c2e}',
@@ -137,7 +152,12 @@
                 '.nxp-feature-desc{color:#7a7d80}',
                 '.nxp-field-label{color:#7a7d80}',
                 '.nxp-hits{background:#1a1c1e;border:1px solid #2f3133}',
-                '.nxp-hit{border-bottom:1px solid #2a2c2e}'
+                '.nxp-hit{border-bottom:1px solid #2a2c2e}',
+                '.nxp-chip{border-color:#3a3d40;color:#d5d7d9;background:transparent}',
+                '.nxp-bulk-bar{background:#1a1c1e;border:1px solid #2f3133}',
+                '.nxp-bulk-count{color:#fff}',
+                '.nxp-preview{background:#393b3d;color:#fff;border:1px solid #2f3133}',
+                '.nxp-lookup-result{color:#7a7d80}'
             ].join('');
         }
         return [
@@ -154,7 +174,6 @@
             '.nxp-row{border-bottom:1px solid #e1e4e8}',
             '.nxp-name{color:#232527}',
             '.nxp-meta{color:#6a6d70}',
-            '.nxp-tag.panel{background:#c7cbce;color:#232527}',
             '.nxp-btn{background:#ffffff;color:#232527;border:1px solid #c7cbce}',
             '.nxp-btn:hover{background:#e8eef5;color:#000}',
             '.nxp-input{background:#ffffff;color:#232527;border:1px solid #c7cbce}',
@@ -167,6 +186,8 @@
             '.nxp-section-title{color:#6a6d70}',
             '.nxp-detail-key{color:#6a6d70}',
             '.nxp-detail-val{color:#232527}',
+            '.nxp-copy-btn{border-color:#c7cbce;color:#6a6d70}',
+            '.nxp-copy-btn:hover{background:#e8eef5;color:#000}',
             '.nxp-log{color:#3a3d40;border-bottom:1px solid #e1e4e8}',
             '.nxp-log-time{color:#6a6d70;margin-right:10px}',
             '.nxp-toggle{border-bottom:1px solid #e1e4e8}',
@@ -177,7 +198,12 @@
             '.nxp-feature-desc{color:#6a6d70}',
             '.nxp-field-label{color:#6a6d70}',
             '.nxp-hits{background:#ffffff;border:1px solid #c7cbce}',
-            '.nxp-hit{border-bottom:1px solid #e1e4e8}'
+            '.nxp-hit{border-bottom:1px solid #e1e4e8}',
+            '.nxp-chip{border-color:#c7cbce;color:#232527;background:transparent}',
+            '.nxp-bulk-bar{background:#ffffff;border:1px solid #c7cbce}',
+            '.nxp-bulk-count{color:#232527}',
+            '.nxp-preview{background:#393b3d;color:#fff;border:1px solid #c7cbce}',
+            '.nxp-lookup-result{color:#6a6d70}'
         ].join('');
     }
 
@@ -210,7 +236,12 @@
         roleIdInput: '',
         roleSelectValue: 'admin',
         roleSubmitting: false,
-        roleLastResult: null
+        roleLastResult: null,
+        usersSort: 'lastSeen',
+        usersFilter: 'all',
+        selectedIds: {},
+        bulkWorking: false,
+        lookupResult: null
     };
 
     function el(tag, props) {
@@ -302,6 +333,26 @@
     function isDev() { return S.role === 'dev'; }
     function can(role) { return rankOf(S.role) >= rankOf(role); }
 
+    function copyToClipboard(text, btn) {
+        var done = function() {
+            if (!btn) return;
+            var old = btn.textContent;
+            btn.textContent = 'copied';
+            setTimeout(function() { btn.textContent = old; }, 900);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, done);
+        } else {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            done();
+        }
+    }
+
     function render() {
         ensureStyle();
         var existing = document.querySelector('.nxp-root');
@@ -316,6 +367,14 @@
         }
     }
 
+    function reloadAll() {
+        clearFeedback();
+        loadUsers();
+        loadLogs();
+        loadConfig();
+        loadServerState();
+    }
+
     function build() {
         var root = el('div', { class: 'nxp-root' });
         var shell = el('div', { class: 'nxp-shell' });
@@ -326,7 +385,14 @@
         var roleLabel = S.role ? ('Signed in as ' + S.role + '.') : 'Loading…';
         titleWrap.appendChild(el('div', { class: 'nxp-sub' }, roleLabel));
         head.appendChild(titleWrap);
-        head.appendChild(el('a', { class: 'nxp-back', href: '/home' }, '← Back to site'));
+
+        var headActions = el('div', { class: 'nxp-head-actions' });
+        headActions.appendChild(el('button', {
+            class: 'nxp-btn',
+            onclick: function() { reloadAll(); }
+        }, '↻ Reload'));
+        headActions.appendChild(el('a', { class: 'nxp-back', href: '/home' }, '← Back to site'));
+        head.appendChild(headActions);
         shell.appendChild(head);
 
         var tabs = el('div', { class: 'nxp-tabs' });
@@ -339,9 +405,7 @@
         if (isDev()) tabList.push(['admins', 'Admins']);
         if (isDev()) tabList.push(['tokens', 'Tokens']);
 
-        if (tabList.map(function(t) { return t[0]; }).indexOf(S.tab) === -1) {
-            S.tab = 'overview';
-        }
+        if (tabList.map(function(t) { return t[0]; }).indexOf(S.tab) === -1) S.tab = 'overview';
 
         tabList.forEach(function(t) {
             tabs.appendChild(el('button', {
@@ -391,6 +455,12 @@
         return null;
     }
 
+    function activeTodayCount() {
+        if (!S.users) return 0;
+        var cutoff = Date.now() - 86400000;
+        return S.users.filter(function(u) { return u.lastSeen > cutoff; }).length;
+    }
+
     function renderOverview() {
         if (S.selectedUser) return renderUserDetail();
 
@@ -400,8 +470,9 @@
         var total = S.users ? S.users.length : 0;
         var admins = S.users ? S.users.filter(function(u) { return u.role === 'dev' || u.role === 'admin'; }).length : 0;
         var banned = S.users ? S.users.filter(function(u) { return u.banned; }).length : 0;
+        var active = activeTodayCount();
 
-        [['Total users', total], ['Admins', admins], ['Banned', banned]].forEach(function(s) {
+        [['Total users', total], ['Active today', active], ['Admins', admins], ['Banned', banned]].forEach(function(s) {
             var card = el('div', { class: 'nxp-stat' });
             card.appendChild(el('div', { class: 'nxp-stat-label' }, s[0]));
             card.appendChild(el('div', { class: 'nxp-stat-value' }, String(s[1])));
@@ -409,10 +480,32 @@
         });
         wrap.appendChild(stats);
 
-        wrap.appendChild(el('div', { class: 'nxp-section-title' }, 'Status'));
-        var statusText = S.loading ? 'Loading…' : (S.error ? S.error : 'Connected.');
-        wrap.appendChild(el('div', { class: 'nxp-sub' }, statusText));
+        wrap.appendChild(el('div', { class: 'nxp-section-title' }, 'Recent activity'));
+        if (!S.logs || !S.logs.length) {
+            wrap.appendChild(el('div', { class: 'nxp-empty' }, 'No log entries yet.'));
+        } else {
+            S.logs.slice(0, 10).forEach(function(l) {
+                var line = el('div', { class: 'nxp-log' });
+                line.appendChild(el('span', { class: 'nxp-log-time' }, fmtTime(l.ts)));
+                var who = l.actor || 'unknown';
+                var what = l.action || '';
+                var meta = l.meta ? ' — ' + l.meta : '';
+                line.appendChild(document.createTextNode(who + ' · ' + what + meta));
+                wrap.appendChild(line);
+            });
+        }
 
+        return wrap;
+    }
+
+    function copyRow(value) {
+        if (value == null || value === '') return document.createTextNode('—');
+        var txt = String(value);
+        var wrap = el('div', { class: 'nxp-detail-val' });
+        wrap.appendChild(document.createTextNode(txt));
+        var btn = el('button', { class: 'nxp-copy-btn', title: 'Copy' }, 'copy');
+        btn.addEventListener('click', function() { copyToClipboard(txt, btn); });
+        wrap.appendChild(btn);
         return wrap;
     }
 
@@ -437,22 +530,22 @@
         wrap.appendChild(el('div', { class: 'nxp-meta' }, 'Aisaka ID #' + (u.aisakaId || u.UserId || '—')));
 
         var grid = el('div', { class: 'nxp-detail-grid', style: 'margin-top:20px' });
-        function addRow(k, v) {
+        function keyVal(k, node) {
             grid.appendChild(el('div', { class: 'nxp-detail-key' }, k));
-            grid.appendChild(el('div', { class: 'nxp-detail-val' }, v == null || v === '' ? '—' : String(v)));
+            grid.appendChild(node);
         }
-        addRow('Username', u.username || u.Name);
-        addRow('Aisaka ID', u.aisakaId || u.UserId);
-        addRow('Role', u.role || 'user');
-        if (u.tokenPreview) addRow('Token preview', u.tokenPreview);
-        addRow('Banned', u.banned ? 'yes' : 'no');
+        keyVal('Username', copyRow(u.username || u.Name));
+        keyVal('Aisaka ID', copyRow(u.aisakaId || u.UserId));
+        keyVal('Role', el('div', { class: 'nxp-detail-val' }, u.role || 'user'));
+        if (u.tokenPreview) keyVal('Token preview', copyRow(u.tokenPreview));
+        keyVal('Banned', el('div', { class: 'nxp-detail-val' }, u.banned ? 'yes' : 'no'));
         if (u.banned) {
-            addRow('Ban reason', u.banReason);
-            addRow('Ban expires', u.banExpiresAt ? fmtTime(u.banExpiresAt) + ' (' + timeAgo(u.banExpiresAt) + ')' : 'permanent');
+            keyVal('Ban reason', el('div', { class: 'nxp-detail-val' }, u.banReason || '—'));
+            keyVal('Ban expires', el('div', { class: 'nxp-detail-val' }, u.banExpiresAt ? fmtTime(u.banExpiresAt) + ' (' + timeAgo(u.banExpiresAt) + ')' : 'permanent'));
         }
-        if (u.firstSeen) addRow('First seen', fmtTime(u.firstSeen) + ' (' + timeAgo(u.firstSeen) + ')');
-        if (u.lastSeen) addRow('Last seen', fmtTime(u.lastSeen) + ' (' + timeAgo(u.lastSeen) + ')');
-        addRow('Profile', '/users/' + (u.aisakaId || u.UserId) + '/profile');
+        if (u.firstSeen) keyVal('First seen', el('div', { class: 'nxp-detail-val' }, fmtTime(u.firstSeen) + ' (' + timeAgo(u.firstSeen) + ')'));
+        if (u.lastSeen) keyVal('Last seen', el('div', { class: 'nxp-detail-val' }, fmtTime(u.lastSeen) + ' (' + timeAgo(u.lastSeen) + ')'));
+        keyVal('Profile', copyRow('/users/' + (u.aisakaId || u.UserId) + '/profile'));
         wrap.appendChild(grid);
 
         if (isDev() && u.tokenPreview && u.role !== 'dev') {
@@ -462,7 +555,6 @@
             roleInfo.appendChild(el('div', { class: 'nxp-name' }, 'Assign role'));
             roleInfo.appendChild(el('div', { class: 'nxp-meta' }, 'Dev only.'));
             roleRow.appendChild(roleInfo);
-
             var sel = el('select', {
                 class: 'nxp-select',
                 onchange: function(e) {
@@ -475,9 +567,7 @@
                             u.isAdmin = rankOf(u.role) >= rankOf('admin');
                             setFeedback(true, 'Role updated to ' + u.role);
                             loadUsers();
-                        } else {
-                            setFeedback(false, (res.data && res.data.error) || 'Failed');
-                        }
+                        } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                     }).catch(function(err) { setFeedback(false, err.message); });
                 }
             });
@@ -492,6 +582,12 @@
 
         var actions = el('div', { class: 'nxp-btn-group', style: 'margin-top:24px' });
 
+        actions.appendChild(el('a', {
+            class: 'nxp-btn',
+            href: '/users/' + (u.aisakaId || u.UserId) + '/profile',
+            target: '_blank'
+        }, 'Open profile'));
+
         if (can('admin')) {
             if (u.banned) {
                 actions.appendChild(el('button', {
@@ -504,9 +600,7 @@
                                 setFeedback(true, 'Unbanned ' + (u.username || u.Name));
                                 S.selectedUser = null;
                                 loadUsers();
-                            } else {
-                                setFeedback(false, (res.data && res.data.error) || 'Failed');
-                            }
+                            } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                         }).catch(function(e) { setFeedback(false, e.message); });
                     }
                 }, 'Unban'));
@@ -514,7 +608,6 @@
                 var canBan = !(rankOf(u.role) >= rankOf('admin') && !isDev());
                 if (canBan) {
                     wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:24px' }, 'Ban options'));
-
                     var reasonField = el('div', { class: 'nxp-field' });
                     reasonField.appendChild(el('div', { class: 'nxp-field-label' }, 'Reason'));
                     reasonField.appendChild(el('input', {
@@ -554,9 +647,7 @@
                                     S.banHours = '';
                                     S.selectedUser = null;
                                     loadUsers();
-                                } else {
-                                    setFeedback(false, (res.data && res.data.error) || 'Failed');
-                                }
+                                } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                             }).catch(function(e) { setFeedback(false, e.message); });
                         }
                     }, 'Ban user'));
@@ -571,6 +662,78 @@
         wrap.appendChild(actions);
 
         return wrap;
+    }
+
+    function sortUsers(list) {
+        var s = S.usersSort;
+        var copy = list.slice();
+        copy.sort(function(a, b) {
+            if (s === 'firstSeen') return (a.firstSeen || 0) - (b.firstSeen || 0);
+            if (s === 'aisakaId') return (a.aisakaId || 0) - (b.aisakaId || 0);
+            if (s === 'username') return String(a.username || '').localeCompare(String(b.username || ''));
+            return (b.lastSeen || 0) - (a.lastSeen || 0);
+        });
+        return copy;
+    }
+
+    function filterUsers(list) {
+        var cutoff = Date.now() - 86400000;
+        if (S.usersFilter === 'active') return list.filter(function(u) { return u.lastSeen > cutoff; });
+        if (S.usersFilter === 'banned') return list.filter(function(u) { return !!u.banned; });
+        if (S.usersFilter === 'admins') return list.filter(function(u) { return u.role === 'dev' || u.role === 'admin'; });
+        return list;
+    }
+
+    function selectedList() {
+        var ids = Object.keys(S.selectedIds).filter(function(k) { return S.selectedIds[k]; });
+        if (!S.users) return [];
+        return S.users.filter(function(u) { return ids.indexOf(String(u.tokenPreview)) !== -1; });
+    }
+
+    function renderBulkBar() {
+        var selected = selectedList();
+        if (!selected.length) return null;
+        var bar = el('div', { class: 'nxp-bulk-bar' });
+        bar.appendChild(el('div', { class: 'nxp-bulk-count' }, selected.length + ' selected'));
+        bar.appendChild(el('button', {
+            class: 'nxp-btn danger',
+            disabled: S.bulkWorking,
+            onclick: function() { bulkBan(true); }
+        }, 'Ban selected'));
+        bar.appendChild(el('button', {
+            class: 'nxp-btn primary',
+            disabled: S.bulkWorking,
+            onclick: function() { bulkBan(false); }
+        }, 'Unban selected'));
+        bar.appendChild(el('button', {
+            class: 'nxp-btn',
+            onclick: function() { S.selectedIds = {}; render(); }
+        }, 'Clear'));
+        return bar;
+    }
+
+    function bulkBan(ban) {
+        var selected = selectedList();
+        if (!selected.length) return;
+        if (!confirm((ban ? 'Ban' : 'Unban') + ' ' + selected.length + ' user(s)?')) return;
+        S.bulkWorking = true;
+        render();
+        var promises = selected.map(function(u) {
+            if (!u.tokenPreview) return Promise.resolve();
+            return callServer(ban ? 'adminBan' : 'adminUnban', ban ? [u.tokenPreview, {}] : [u.tokenPreview])
+                .then(function(raw) {
+                    var res = normaliseRes(raw);
+                    return res.status === 200 && res.data && res.data.ok;
+                })
+                .catch(function() { return false; });
+        });
+        Promise.all(promises).then(function(results) {
+            S.bulkWorking = false;
+            S.selectedIds = {};
+            var ok = results.filter(Boolean).length;
+            setFeedback(ok === results.length, (ban ? 'Banned ' : 'Unbanned ') + ok + '/' + results.length);
+            loadUsers();
+        });
     }
 
     function renderUsers() {
@@ -637,10 +800,51 @@
         if (S.error) { wrap.appendChild(el('div', { class: 'nxp-empty' }, S.error)); return wrap; }
         if (!S.users || !S.users.length) { wrap.appendChild(el('div', { class: 'nxp-empty' }, 'No Nexus users yet.')); return wrap; }
 
-        wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:8px' }, 'Nexus users'));
+        var toolbar = el('div', { class: 'nxp-toolbar' });
 
-        S.users.forEach(function(u) {
+        var sortSel = el('select', {
+            class: 'nxp-select',
+            onchange: function(e) { S.usersSort = e.currentTarget.value; render(); }
+        });
+        [['lastSeen', 'Last seen'], ['firstSeen', 'First seen'], ['aisakaId', 'Aisaka ID'], ['username', 'Username']].forEach(function(o) {
+            var opt = el('option', { value: o[0] }, o[1]);
+            if (S.usersSort === o[0]) opt.selected = true;
+            sortSel.appendChild(opt);
+        });
+        toolbar.appendChild(sortSel);
+
+        [['all', 'All'], ['active', 'Active today'], ['admins', 'Admins'], ['banned', 'Banned']].forEach(function(f) {
+            toolbar.appendChild(el('button', {
+                class: 'nxp-chip' + (S.usersFilter === f[0] ? ' active' : ''),
+                onclick: function() { S.usersFilter = f[0]; render(); }
+            }, f[1]));
+        });
+
+        wrap.appendChild(toolbar);
+
+        var bulk = renderBulkBar();
+        if (bulk) wrap.appendChild(bulk);
+
+        var list = sortUsers(filterUsers(S.users));
+        if (!list.length) {
+            wrap.appendChild(el('div', { class: 'nxp-empty' }, 'No users match the current filter.'));
+            return wrap;
+        }
+
+        list.forEach(function(u) {
             var row = el('div', { class: 'nxp-row' });
+
+            var cb = el('input', {
+                class: 'nxp-checkbox',
+                type: 'checkbox'
+            });
+            cb.checked = !!S.selectedIds[String(u.tokenPreview)];
+            cb.addEventListener('change', function() {
+                S.selectedIds[String(u.tokenPreview)] = cb.checked;
+                render();
+            });
+            row.appendChild(cb);
+
             var info = el('div', { class: 'nxp-user' });
             var name = el('div', { class: 'nxp-name' }, (u.username || 'Unknown') + ' #' + u.aisakaId);
             var tag = roleTag(u.role);
@@ -672,9 +876,7 @@
                             if (res.status === 200 && res.data && res.data.ok) {
                                 setFeedback(true, (u.banned ? 'Unbanned ' : 'Banned ') + u.username);
                                 loadUsers();
-                            } else {
-                                setFeedback(false, (res.data && res.data.error) || 'Failed');
-                            }
+                            } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                         }).catch(function(e) { setFeedback(false, e.message); });
                     }
                 }, u.banned ? 'Unban' : 'Ban'));
@@ -688,7 +890,6 @@
     function doSearch() {
         var q = (S.query || '').trim();
         if (!q) return;
-
         S.searching = true;
         S.searchHits = null;
         S.searchError = null;
@@ -721,6 +922,18 @@
             });
     }
 
+    function downloadJson(name, data) {
+        var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    }
+
     function renderLogs() {
         var wrap = el('div', {});
 
@@ -729,6 +942,13 @@
             class: 'nxp-btn',
             onclick: function() { loadLogs(); }
         }, 'Refresh'));
+        toolbar.appendChild(el('button', {
+            class: 'nxp-btn',
+            disabled: !S.logs || !S.logs.length,
+            onclick: function() {
+                downloadJson('nexus-logs-' + Date.now() + '.json', S.logs || []);
+            }
+        }, 'Export JSON'));
         wrap.appendChild(toolbar);
 
         if (S.logsLoading) { wrap.appendChild(el('div', { class: 'nxp-empty' }, 'Loading logs…')); return wrap; }
@@ -749,7 +969,6 @@
 
     function renderFeatures() {
         var wrap = el('div', {});
-
         if (S.configLoading) return el('div', { class: 'nxp-empty' }, 'Loading features…');
         if (S.configError) return el('div', { class: 'nxp-empty' }, S.configError);
 
@@ -761,7 +980,6 @@
         FEATURES.forEach(function(f) {
             var on = config[f.key] !== false;
             var row = el('div', { class: 'nxp-toggle' });
-
             var info = el('div', { class: 'nxp-toggle-info' });
             info.appendChild(el('div', { class: 'nxp-name' }, f.label));
             info.appendChild(el('div', { class: 'nxp-feature-desc' }, f.desc));
@@ -797,7 +1015,6 @@
             sw.appendChild(input);
             sw.appendChild(el('span', { class: 'nxp-slider' }));
             row.appendChild(sw);
-
             wrap.appendChild(row);
         });
 
@@ -807,18 +1024,15 @@
             onclick: function() { loadConfig(); }
         }, 'Refresh'));
         wrap.appendChild(actions);
-
         return wrap;
     }
 
     function renderConfig() {
         var wrap = el('div', {});
-
         if (S.configLoading) return el('div', { class: 'nxp-empty' }, 'Loading config…');
         if (S.configError) return el('div', { class: 'nxp-empty' }, S.configError);
 
         var config = S.config || {};
-
         wrap.appendChild(el('div', { class: 'nxp-section-title' }, 'Maintenance mode'));
 
         var maintRow = el('div', { class: 'nxp-toggle' });
@@ -859,15 +1073,11 @@
         wrap.appendChild(maintRow);
 
         wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:24px' }, 'All config keys'));
-        wrap.appendChild(el('div', { class: 'nxp-sub', style: 'margin-bottom:12px' },
-            'Raw view. Features are toggled in the Features tab.'));
-
         var keys = Object.keys(config).sort();
         if (!keys.length) {
             wrap.appendChild(el('div', { class: 'nxp-empty' }, 'Config is empty.'));
             return wrap;
         }
-
         keys.forEach(function(k) {
             var row = el('div', { class: 'nxp-row' });
             var info = el('div', { class: 'nxp-user' });
@@ -876,13 +1086,11 @@
             row.appendChild(info);
             wrap.appendChild(row);
         });
-
         return wrap;
     }
 
     function renderAnnounce() {
         var wrap = el('div', {});
-
         if (S.serverStateLoading) return el('div', { class: 'nxp-empty' }, 'Loading current announcement…');
 
         var current = S.serverState && S.serverState.announcement;
@@ -891,11 +1099,8 @@
         var line = el('div', { class: 'nxp-status-line' });
 
         if (current && current.text) {
-            if (current.test) {
-                line.appendChild(el('span', { class: 'nxp-tag warn' }, 'TEST'));
-            } else {
-                line.appendChild(el('span', { class: 'nxp-tag ok' }, 'LIVE'));
-            }
+            if (current.test) line.appendChild(el('span', { class: 'nxp-tag warn' }, 'TEST'));
+            else line.appendChild(el('span', { class: 'nxp-tag ok' }, 'LIVE'));
             line.appendChild(document.createTextNode(' ' + current.text.slice(0, 80) + (current.text.length > 80 ? '…' : '')));
             status.appendChild(line);
             var meta = el('div', { class: 'nxp-status-meta' },
@@ -914,10 +1119,15 @@
         var ta = el('textarea', {
             class: 'nxp-textarea',
             placeholder: 'Announcement text…',
-            oninput: function(e) { S.announceDraft = e.currentTarget.value; }
+            oninput: function(e) { S.announceDraft = e.currentTarget.value; render(); }
         });
         ta.value = S.announceDraft || '';
         wrap.appendChild(ta);
+
+        wrap.appendChild(el('div', { class: 'nxp-field-label', style: 'margin-top:8px' }, 'Preview'));
+        var draft = (S.announceDraft || '').trim() || '(empty)';
+        var preview = el('div', { class: 'nxp-preview' }, draft);
+        wrap.appendChild(preview);
 
         var actions = el('div', { class: 'nxp-btn-group', style: 'margin-top:12px' });
 
@@ -930,9 +1140,7 @@
                         setFeedback(true, 'Announcement posted.');
                         S.announceDraft = '';
                         loadServerState();
-                    } else {
-                        setFeedback(false, (res.data && res.data.error) || 'Failed');
-                    }
+                    } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                 }).catch(function(e) { setFeedback(false, e.message); });
             }
         }, 'Post announcement'));
@@ -946,14 +1154,12 @@
                         setFeedback(true, 'Test announcement posted. Only you will see it.');
                         S.announceDraft = '';
                         loadServerState();
-                    } else {
-                        setFeedback(false, (res.data && res.data.error) || 'Failed');
-                    }
+                    } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                 }).catch(function(e) { setFeedback(false, e.message); });
             }
         }, 'Send test'));
 
-        var clearBtn = el('button', {
+        actions.appendChild(el('button', {
             class: 'nxp-btn',
             disabled: !(current && current.text),
             onclick: function() {
@@ -963,21 +1169,36 @@
                     if (res.status === 200 && res.data && res.data.ok) {
                         setFeedback(true, 'Announcement cleared.');
                         loadServerState();
-                    } else {
-                        setFeedback(false, (res.data && res.data.error) || 'Failed');
-                    }
+                    } else setFeedback(false, (res.data && res.data.error) || 'Failed');
                 }).catch(function(e) { setFeedback(false, e.message); });
             }
-        }, 'Clear');
-        actions.appendChild(clearBtn);
+        }, 'Clear'));
 
         actions.appendChild(el('button', {
             class: 'nxp-btn',
             onclick: function() { loadServerState(); }
         }, 'Refresh'));
         wrap.appendChild(actions);
-
         return wrap;
+    }
+
+    function lookupUser(id) {
+        S.lookupResult = { loading: true };
+        render();
+        callServer('adminUsers').then(function(raw) {
+            var res = normaliseRes(raw);
+            if (res.status === 200) {
+                var all = (res.data && res.data.users) || [];
+                var u = all.filter(function(x) { return String(x.aisakaId) === String(id); })[0];
+                S.lookupResult = { loading: false, user: u || null };
+            } else {
+                S.lookupResult = { loading: false, error: 'Lookup failed' };
+            }
+            render();
+        }).catch(function(e) {
+            S.lookupResult = { loading: false, error: e.message || 'Lookup failed' };
+            render();
+        });
     }
 
     function renderAdmins() {
@@ -988,7 +1209,6 @@
             'Works for claimed and unclaimed users. If the user has not opened Nexus yet, the role is stored and applied on their first claim. The dev (source-code) cannot be changed here.'));
 
         var row = el('div', { class: 'nxp-role-row' });
-
         var idField = el('div', { class: 'nxp-field' });
         idField.appendChild(el('div', { class: 'nxp-field-label' }, 'Aisaka ID'));
         idField.appendChild(el('input', {
@@ -1044,11 +1264,32 @@
             }
         }, S.roleSubmitting ? 'Applying…' : 'Apply'));
         row.appendChild(applyWrap);
-
         wrap.appendChild(row);
 
+        var idForLookup = parseInt(S.roleIdInput, 10);
+        if (idForLookup) {
+            if (!S.lookupResult || S.lookupResult.id !== idForLookup) {
+                S.lookupResult = { id: idForLookup, loading: true };
+                lookupUser(idForLookup);
+            }
+            var lr = S.lookupResult;
+            var line = el('div', { class: 'nxp-lookup-result' });
+            if (lr.loading) line.textContent = 'Checking #' + idForLookup + '…';
+            else if (lr.error) line.textContent = lr.error;
+            else if (lr.user) {
+                line.appendChild(document.createTextNode('Already claimed: ' + (lr.user.username || 'Unknown') + ' — current role: '));
+                var t = roleTag(lr.user.role);
+                if (t) line.appendChild(t);
+                else line.appendChild(document.createTextNode(lr.user.role || 'user'));
+                if (lr.user.banned) line.appendChild(el('span', { class: 'nxp-tag banned' }, 'BANNED'));
+            } else {
+                line.textContent = 'Not claimed yet — role will be stored as pending.';
+            }
+            wrap.appendChild(line);
+        }
+
         if (S.roleLastResult) {
-            wrap.appendChild(el('div', { class: 'nxp-status-box' },
+            wrap.appendChild(el('div', { class: 'nxp-status-box', style: 'margin-top:16px' },
                 el('div', { class: 'nxp-status-line' },
                     el('span', { class: 'nxp-tag ' + (S.roleLastResult.applied ? 'ok' : 'warn') },
                         S.roleLastResult.applied ? 'APPLIED' : 'PENDING'),
@@ -1056,20 +1297,17 @@
                 )
             ));
         }
-
         return wrap;
     }
 
     function renderTokens() {
         var wrap = el('div', {});
-
         var toolbar = el('div', { class: 'nxp-btn-group', style: 'margin-bottom:16px' });
         toolbar.appendChild(el('button', {
             class: 'nxp-btn',
             onclick: function() { loadTokens(); }
         }, 'Refresh'));
         wrap.appendChild(toolbar);
-
         wrap.appendChild(el('div', { class: 'nxp-sub', style: 'margin-bottom:12px' },
             'Dev only. Every claimed Nexus token.'));
 
@@ -1084,11 +1322,15 @@
             var tag = roleTag(t.role);
             if (tag) name.appendChild(tag);
             info.appendChild(name);
-            info.appendChild(el('div', { class: 'nxp-meta', style: 'font-family:ui-monospace,Menlo,Consolas,monospace' }, t.token));
+            var tokenRow = el('div', { class: 'nxp-detail-val' });
+            tokenRow.appendChild(document.createTextNode(t.token));
+            var copy = el('button', { class: 'nxp-copy-btn' }, 'copy');
+            copy.addEventListener('click', function() { copyToClipboard(t.token, copy); });
+            tokenRow.appendChild(copy);
+            info.appendChild(tokenRow);
             row.appendChild(info);
             wrap.appendChild(row);
         });
-
         return wrap;
     }
 
@@ -1210,6 +1452,7 @@
                     render();
                     loadLogs();
                     if (can('moderator')) loadUsers();
+                    loadServerState();
                 }).catch(function(e) {
                     S.error = e.message || 'Could not reach server.';
                     render();
