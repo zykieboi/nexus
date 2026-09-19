@@ -110,6 +110,11 @@
                     label: 'Hide Alert',
                     desc: 'Hides the alert banner under the navigation bar for now.'
                 },
+                customBackground: {
+                    cat: 'visual',
+                    label: 'Custom Background',
+                    desc: 'Replace the site background with an image, gif, or video. Drag to reposition.'
+                },
                 nexusPanel: {
                     cat: 'visual',
                     label: 'Nexus Panel',
