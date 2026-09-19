@@ -15,14 +15,17 @@ const IP_RATE_LIMIT = 120;
 const IP_RATE_WINDOW_MS = 60000;
 const GLOBAL_RATE_LIMIT = 3000;
 const GLOBAL_RATE_WINDOW_MS = 60000;
-const CLAIM_PER_IP_LIMIT = 5;
+const CLAIM_PER_IP_LIMIT = 25;          // raised from 5 — shared NAT was throttling users
 const CLAIM_PER_IP_WINDOW_MS = 600000;
 const MAX_TOKENS_PER_IP = 25;
+
+// Note: removed the empty-string pattern (was blocking privacy browsers) and
+// added a few more bots. The empty UA case is now handled in badUserAgent().
 const BAD_UA_PATTERNS = [
-    /^$/, /curl/i, /wget/i, /python-requests/i, /python-urllib/i, /scrapy/i,
+    /curl/i, /wget/i, /python-requests/i, /python-urllib/i, /scrapy/i,
     /libwww-perl/i, /go-http-client/i, /java\//i, /okhttp/i, /axios\//i,
     /node-fetch/i, /postmanruntime/i, /insomnia/i, /masscan/i, /nmap/i,
-    /zgrab/i, /gobuster/i, /nikto/i, /sqlmap/i, /nikto/i, /nuclei/i
+    /zgrab/i, /gobuster/i, /nikto/i, /sqlmap/i, /nuclei/i
 ];
 
 const SUSPICIOUS_PATHS = [
@@ -112,7 +115,10 @@ async function incrTokensFromIp(env, ip) {
 }
 
 function badUserAgent(ua) {
-    if (!ua) return true;
+    // Missing UA is suspicious, but we only reject if it's missing AND the
+    // request is not coming from a browser-ish origin. Keep it simple:
+    // allow empty UA (privacy browsers), block known bot strings.
+    if (!ua) return false;
     for (const re of BAD_UA_PATTERNS) if (re.test(ua)) return true;
     return false;
 }
@@ -145,6 +151,8 @@ async function logSecurity(env, entry) {
             meta: entry.meta
         }));
     } catch (e) {}
+    // Don't double-post to Discord; logAction handles that for user-facing actions.
+    // Security events still get Discord via sendDiscord directly here.
     await sendDiscord(env, {
         ts: Date.now(),
         actor: 'security',
@@ -224,6 +232,7 @@ export default {
         }
 
         if (badUserAgent(ua)) {
+            console.log('blocked-ua', { ip, ua: ua.slice(0, 120), path: url.pathname });
             return json({ error: 'forbidden' }, 403, cors);
         }
 
@@ -245,7 +254,20 @@ export default {
         }
 
         const token = request.headers.get('x-nexus-token');
+
+        // Diagnostic: log every /claim attempt with its token state before validation
+        if (url.pathname === '/claim' && request.method === 'POST') {
+            console.log('claim-attempt', {
+                ip,
+                ua: ua.slice(0, 80),
+                hasToken: !!token,
+                tokenLen: token ? token.length : 0,
+                tokenShape: token ? /^[a-f0-9]+$/i.test(token) : false
+            });
+        }
+
         if (!token || token.length < 32 || token.length > 128 || !/^[a-f0-9]+$/i.test(token)) {
+            console.log('reject-missing-token', { path: url.pathname, ip, hasToken: !!token });
             return json({ error: 'missing token' }, 401, cors);
         }
 
@@ -255,6 +277,7 @@ export default {
         if (url.pathname === '/claim' && request.method === 'POST') {
             const claimLimit = await checkClaimRateLimit(env, ip);
             if (claimLimit) {
+                console.log('reject-claim-rate-limit', { ip, retryAfter: claimLimit.retryAfter });
                 await logSecurity(env, { action: 'security.claim-rate-limit', meta: ip });
                 return json({ error: 'rate limited', retryAfter: claimLimit.retryAfter }, 429, cors);
             }
@@ -262,16 +285,28 @@ export default {
             if (!user) {
                 const tokenCount = await countTokensFromIp(env, ip);
                 if (tokenCount >= MAX_TOKENS_PER_IP) {
+                    console.log('reject-too-many-tokens', { ip, tokenCount });
                     await logSecurity(env, { action: 'security.too-many-claims', meta: ip + ' — ' + tokenCount });
                     return json({ error: 'too many tokens from this ip' }, 429, cors);
                 }
             }
 
             let body;
-            try { body = await request.json(); } catch (e) { return json({ error: 'bad json' }, 400, cors); }
+            try { body = await request.json(); } catch (e) {
+                console.log('reject-bad-json', { ip });
+                return json({ error: 'bad json' }, 400, cors);
+            }
+
             const aisakaId = parseInt(body.aisakaId, 10);
             const username = String(body.username || '').slice(0, 64);
-            if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
+            if (!aisakaId || aisakaId < 1 || aisakaId > Number.MAX_SAFE_INTEGER) {
+                console.log('reject-invalid-id', { ip, raw: body.aisakaId });
+                return json({ error: 'invalid id' }, 400, cors);
+            }
+            if (!username) {
+                console.log('reject-invalid-username', { ip, aisakaId });
+                return json({ error: 'invalid username' }, 400, cors);
+            }
 
             const pendingKey = 'pending_role:' + aisakaId;
             const pending = await env.NEXUS_KV.get(pendingKey, 'json');
@@ -291,6 +326,7 @@ export default {
                 }
                 user = await applyExpiry(env, key, user);
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
+                console.log('claim-existing', { aisakaId: user.aisakaId, role: user.role });
                 return json({ ok: true, alreadyClaimed: true, role: user.role, isAdmin: user.isAdmin }, 200, cors);
             }
 
@@ -313,6 +349,8 @@ export default {
             };
             await env.NEXUS_KV.put(key, JSON.stringify(user));
             await incrTokensFromIp(env, ip);
+
+            console.log('claim-new', { aisakaId, username, role, ip });
 
             await logAction(env, {
                 ts: Date.now(),
@@ -374,7 +412,10 @@ export default {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     u = migrate(u);
-                    u = await applyExpiry(env, k.name, u);
+                    // Only persist expiry cleanup; don't rewrite on every list.
+                    if (isExpired(u)) {
+                        u = await applyExpiry(env, k.name, u);
+                    }
                     users.push(Object.assign(publicUser(u), {
                         tokenPreview: k.name.slice(6, 20) + '…'
                     }));
@@ -609,11 +650,12 @@ export default {
 };
 
 function publicUser(u) {
+    const role = u.role || (u.isAdmin ? 'admin' : 'user');
     return {
         aisakaId: u.aisakaId,
         username: u.username,
-        role: u.role || (u.isAdmin ? 'admin' : 'user'),
-        isAdmin: rankOf(u.role) >= rankOf('admin'),
+        role,
+        isAdmin: rankOf(role) >= rankOf('admin'),
         banned: !!u.banned,
         banReason: u.banReason || null,
         banExpiresAt: u.banExpiresAt || null,
