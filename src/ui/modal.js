@@ -115,6 +115,16 @@
                     label: 'Custom Background',
                     desc: 'Replace the site background with an image, gif, or video. Drag to reposition.'
                 },
+                customLogo: {
+                    cat: 'visual',
+                    label: 'Custom Logo',
+                    desc: 'Replace the navbar logo with your own image.'
+                },
+                roundedCorners: {
+                    cat: 'visual',
+                    label: 'Rounded Corners',
+                    desc: 'Rounds cards, buttons, and inputs across the whole site.'
+                },
                 nexusPanel: {
                     cat: 'visual',
                     label: 'Nexus Panel',
