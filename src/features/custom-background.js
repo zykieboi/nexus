@@ -24,6 +24,8 @@
         pmin: 'nx_bg_panel_min'
     };
 
+    var panelHidden = false;
+
     function isDarkTheme() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
         catch (e) { return false; }
@@ -210,8 +212,12 @@
             '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:280px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);user-select:none;}',
             '#' + PANEL_ID + ' .nxbg-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;cursor:grab;padding:2px 0;}',
             '#' + PANEL_ID + ' .nxbg-head:active{cursor:grabbing;}',
+            '#' + PANEL_ID + ' .nxbg-head-title{flex:1;}',
+            '#' + PANEL_ID + ' .nxbg-head-actions{display:flex;gap:2px;align-items:center;}',
             '#' + PANEL_ID + ' .nxbg-min{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
             '#' + PANEL_ID + ' .nxbg-min:hover{color:' + text + ';}',
+            '#' + PANEL_ID + ' .nxbg-close{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
+            '#' + PANEL_ID + ' .nxbg-close:hover{color:#e5484d;}',
             '#' + PANEL_ID + ' input[type=text]{width:100%;background:' + inputBg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12px;box-sizing:border-box;margin-bottom:8px;}',
             '#' + PANEL_ID + ' input[type=text]:focus{outline:none;border-color:#0a84ff;}',
             '#' + PANEL_ID + ' select{width:100%;background:' + inputBg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12px;margin-bottom:8px;box-sizing:border-box;}',
@@ -235,12 +241,10 @@
 
     function clampPanelPosition(panel) {
         var rect = panel.getBoundingClientRect();
-        var x = rect.left;
-        var y = rect.top;
         var maxX = window.innerWidth - rect.width - 4;
         var maxY = window.innerHeight - rect.height - 4;
-        var newX = Math.max(4, Math.min(maxX, x));
-        var newY = Math.max(4, Math.min(maxY, y));
+        var newX = Math.max(4, Math.min(maxX, rect.left));
+        var newY = Math.max(4, Math.min(maxY, rect.top));
         panel.style.left = newX + 'px';
         panel.style.top = newY + 'px';
         panel.style.right = 'auto';
@@ -270,22 +274,19 @@
         panel.style.bottom = 'auto';
         requestAnimationFrame(function() {
             var clamped = clampPanelPosition(panel);
-            if (clamped.x !== x || clamped.y !== y) {
-                savePanelPosition(panel);
-            }
+            if (clamped.x !== x || clamped.y !== y) savePanelPosition(panel);
         });
     }
 
     function attachPanelDrag(panel) {
         var head = panel.querySelector('.nxbg-head');
         if (!head) return;
-        var dragging = false;
-        var offsetX = 0;
-        var offsetY = 0;
+        var dragging = false, offsetX = 0, offsetY = 0;
 
         head.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return;
             if (e.target.closest('.nxbg-min')) return;
+            if (e.target.closest('.nxbg-close')) return;
             dragging = true;
             var rect = panel.getBoundingClientRect();
             offsetX = e.clientX - rect.left;
@@ -295,10 +296,8 @@
 
         document.addEventListener('mousemove', function(e) {
             if (!dragging) return;
-            var x = e.clientX - offsetX;
-            var y = e.clientY - offsetY;
-            panel.style.left = x + 'px';
-            panel.style.top = y + 'px';
+            panel.style.left = (e.clientX - offsetX) + 'px';
+            panel.style.top = (e.clientY - offsetY) + 'px';
             panel.style.right = 'auto';
             panel.style.bottom = 'auto';
         });
@@ -312,6 +311,7 @@
     }
 
     function buildPanel() {
+        if (panelHidden) return;
         var old = document.getElementById(PANEL_ID);
         if (old) old.remove();
         ensurePanelStyle();
@@ -326,7 +326,11 @@
         head.className = 'nxbg-head';
 
         var title = document.createElement('span');
+        title.className = 'nxbg-head-title';
         title.textContent = 'Custom Background';
+
+        var actions = document.createElement('div');
+        actions.className = 'nxbg-head-actions';
 
         var min = document.createElement('button');
         min.className = 'nxbg-min';
@@ -345,8 +349,22 @@
             });
         };
 
+        var close = document.createElement('button');
+        close.className = 'nxbg-close';
+        close.textContent = '\u00d7';
+        close.title = 'Hide panel (toggle the feature off and on to bring it back)';
+        close.onclick = function(e) {
+            e.stopPropagation();
+            panelHidden = true;
+            var p = document.getElementById(PANEL_ID);
+            if (p) p.remove();
+        };
+
+        actions.appendChild(min);
+        actions.appendChild(close);
+
         head.appendChild(title);
-        head.appendChild(min);
+        head.appendChild(actions);
         panel.appendChild(head);
 
         var body = document.createElement('div');
@@ -522,7 +540,7 @@
 
         var hint = document.createElement('div');
         hint.className = 'nxbg-hint';
-        hint.textContent = 'Drag this panel by its title bar. Position and size are saved.';
+        hint.textContent = 'Drag this panel by its title bar. × hides the panel until you toggle the feature off and on.';
         body.appendChild(hint);
 
         panel.appendChild(body);
@@ -554,30 +572,42 @@
         buildPanel();
     }
 
-    function watchUrl() {
+    var watchIv = null;
+
+    function startWatching() {
+        if (watchIv) clearInterval(watchIv);
         var last = location.href;
-        setInterval(function() {
+        watchIv = setInterval(function() {
             if (location.href !== last) {
                 last = location.href;
                 if (getUrl() && !getLayer()) {
                     ensurePageTransparent();
                     buildLayer();
                 }
-                if (!document.getElementById(PANEL_ID)) buildPanel();
+                if (!document.getElementById(PANEL_ID) && !panelHidden) buildPanel();
             }
         }, 400);
     }
 
+    function stopWatching() {
+        if (watchIv) {
+            clearInterval(watchIv);
+            watchIv = null;
+        }
+    }
+
     window.NX.features.customBackground = {
         apply: function() {
+            panelHidden = false;
             if (getUrl()) {
                 ensurePageTransparent();
                 buildLayer();
             }
             buildPanel();
-            watchUrl();
+            startWatching();
         },
         teardown: function() {
+            stopWatching();
             var layer = getLayer();
             if (layer) layer.remove();
             var overlay = document.getElementById('nx-bg-overlay');
