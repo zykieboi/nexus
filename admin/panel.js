@@ -100,7 +100,7 @@
         '.nxp-hits{border-radius:8px;padding:8px 14px;margin-bottom:16px}',
         '.nxp-hit{display:flex;align-items:center;justify-content:space-between;padding:10px 0;gap:12px}',
         '.nxp-hit:last-child{border-bottom:0}',
-        '.nxp-role-row{display:grid;grid-template-columns:1fr 200px auto;gap:12px;align-items:end;margin-bottom:20px}',
+        '.nxp-role-row{display:grid;grid-template-columns:1fr 200px auto;gap:12px;align-items:end;margin-bottom:12px}',
         '.nxp-checkbox{width:16px;height:16px;flex-shrink:0;cursor:pointer;margin-right:10px}',
         '.nxp-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}',
         '.nxp-toolbar .nxp-select{padding:6px 10px;font-size:12px}',
@@ -109,7 +109,8 @@
         '.nxp-bulk-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:16px}',
         '.nxp-bulk-count{font-size:13px;font-weight:600}',
         '.nxp-preview{border-radius:8px;padding:12px 48px 12px 16px;font-size:15px;text-align:center;position:relative;margin-top:12px}',
-        '.nxp-lookup-result{margin-top:8px;font-size:12px}'
+        '.nxp-lookup-result{margin-top:8px;font-size:12px}',
+        '.nxp-announce-counter{font-size:11px;text-align:right;margin-top:4px;opacity:0.7}'
     ].join('');
 
     function buildThemeCss(dark) {
@@ -241,7 +242,9 @@
         usersFilter: 'all',
         selectedIds: {},
         bulkWorking: false,
-        lookupResult: null
+        lookupResult: null,
+        lookupTimer: null,
+        lookupCache: null
     };
 
     function el(tag, props) {
@@ -494,7 +497,6 @@
                 wrap.appendChild(line);
             });
         }
-
         return wrap;
     }
 
@@ -608,6 +610,7 @@
                 var canBan = !(rankOf(u.role) >= rankOf('admin') && !isDev());
                 if (canBan) {
                     wrap.appendChild(el('div', { class: 'nxp-section-title', style: 'margin-top:24px' }, 'Ban options'));
+
                     var reasonField = el('div', { class: 'nxp-field' });
                     reasonField.appendChild(el('div', { class: 'nxp-field-label' }, 'Reason'));
                     reasonField.appendChild(el('input', {
@@ -1116,17 +1119,31 @@
 
         wrap.appendChild(el('div', { class: 'nxp-section-title' }, current && current.text ? 'Replace announcement' : 'New announcement'));
 
+        var counter = el('div', { class: 'nxp-announce-counter' });
+        function updateCounter(v) {
+            var n = (v || '').length;
+            counter.textContent = n + ' / 500';
+            counter.style.color = n > 450 ? '#e5484d' : '';
+        }
+
         var ta = el('textarea', {
             class: 'nxp-textarea',
             placeholder: 'Announcement text…',
-            oninput: function(e) { S.announceDraft = e.currentTarget.value; render(); }
+            oninput: function(e) {
+                S.announceDraft = e.currentTarget.value;
+                updateCounter(S.announceDraft);
+                var prev = document.querySelector('.nxp-announce-preview');
+                if (prev) prev.textContent = (S.announceDraft || '').trim() || '(empty)';
+            }
         });
         ta.value = S.announceDraft || '';
         wrap.appendChild(ta);
+        wrap.appendChild(counter);
+        updateCounter(S.announceDraft);
 
         wrap.appendChild(el('div', { class: 'nxp-field-label', style: 'margin-top:8px' }, 'Preview'));
-        var draft = (S.announceDraft || '').trim() || '(empty)';
-        var preview = el('div', { class: 'nxp-preview' }, draft);
+        var preview = el('div', { class: 'nxp-preview nxp-announce-preview' });
+        preview.textContent = (S.announceDraft || '').trim() || '(empty)';
         wrap.appendChild(preview);
 
         var actions = el('div', { class: 'nxp-btn-group', style: 'margin-top:12px' });
@@ -1182,23 +1199,49 @@
         return wrap;
     }
 
-    function lookupUser(id) {
-        S.lookupResult = { loading: true };
-        render();
+    function performLookup(id) {
+        if (!S.lookupCache) S.lookupCache = {};
+        if (S.lookupCache[id]) {
+            S.lookupResult = { id: id, loading: false, user: S.lookupCache[id] };
+            updateLookupLine();
+            return;
+        }
+        S.lookupResult = { id: id, loading: true };
+        updateLookupLine();
         callServer('adminUsers').then(function(raw) {
             var res = normaliseRes(raw);
             if (res.status === 200) {
                 var all = (res.data && res.data.users) || [];
-                var u = all.filter(function(x) { return String(x.aisakaId) === String(id); })[0];
-                S.lookupResult = { loading: false, user: u || null };
+                var u = all.filter(function(x) { return String(x.aisakaId) === String(id); })[0] || null;
+                S.lookupCache[id] = u;
+                S.lookupResult = { id: id, loading: false, user: u };
             } else {
-                S.lookupResult = { loading: false, error: 'Lookup failed' };
+                S.lookupResult = { id: id, loading: false, error: 'Lookup failed' };
             }
-            render();
+            updateLookupLine();
         }).catch(function(e) {
-            S.lookupResult = { loading: false, error: e.message || 'Lookup failed' };
-            render();
+            S.lookupResult = { id: id, loading: false, error: e.message || 'Lookup failed' };
+            updateLookupLine();
         });
+    }
+
+    function updateLookupLine() {
+        var line = document.querySelector('.nxp-lookup-live');
+        if (!line) return;
+        line.replaceChildren();
+        var lr = S.lookupResult;
+        if (!lr) return;
+        if (lr.loading) line.textContent = 'Checking #' + lr.id + '…';
+        else if (lr.error) line.textContent = lr.error;
+        else if (lr.user) {
+            line.appendChild(document.createTextNode('Already claimed: ' + (lr.user.username || 'Unknown') + ' — current role: '));
+            var t = roleTag(lr.user.role);
+            if (t) line.appendChild(t);
+            else line.appendChild(document.createTextNode(lr.user.role || 'user'));
+            if (lr.user.banned) line.appendChild(el('span', { class: 'nxp-tag banned' }, 'BANNED'));
+        } else {
+            line.textContent = 'Not claimed yet — role will be stored as pending.';
+        }
     }
 
     function renderAdmins() {
@@ -1216,7 +1259,17 @@
             type: 'text',
             placeholder: 'e.g. 12345',
             value: S.roleIdInput || '',
-            oninput: function(e) { S.roleIdInput = e.currentTarget.value; }
+            oninput: function(e) {
+                S.roleIdInput = e.currentTarget.value;
+                if (S.lookupTimer) clearTimeout(S.lookupTimer);
+                var val = parseInt(S.roleIdInput, 10);
+                if (val) {
+                    S.lookupTimer = setTimeout(function() { performLookup(val); }, 400);
+                } else {
+                    S.lookupResult = null;
+                    updateLookupLine();
+                }
+            }
         }));
         row.appendChild(idField);
 
@@ -1253,6 +1306,7 @@
                             ? ('Updated #' + id + ' → ' + res.data.role)
                             : ('Pending: #' + id + ' → ' + res.data.role + ' (applies on first claim)'));
                         S.roleIdInput = '';
+                        if (S.lookupCache) delete S.lookupCache[id];
                         loadUsers();
                     } else {
                         setFeedback(false, (res.data && res.data.error) || 'Failed');
@@ -1266,27 +1320,9 @@
         row.appendChild(applyWrap);
         wrap.appendChild(row);
 
-        var idForLookup = parseInt(S.roleIdInput, 10);
-        if (idForLookup) {
-            if (!S.lookupResult || S.lookupResult.id !== idForLookup) {
-                S.lookupResult = { id: idForLookup, loading: true };
-                lookupUser(idForLookup);
-            }
-            var lr = S.lookupResult;
-            var line = el('div', { class: 'nxp-lookup-result' });
-            if (lr.loading) line.textContent = 'Checking #' + idForLookup + '…';
-            else if (lr.error) line.textContent = lr.error;
-            else if (lr.user) {
-                line.appendChild(document.createTextNode('Already claimed: ' + (lr.user.username || 'Unknown') + ' — current role: '));
-                var t = roleTag(lr.user.role);
-                if (t) line.appendChild(t);
-                else line.appendChild(document.createTextNode(lr.user.role || 'user'));
-                if (lr.user.banned) line.appendChild(el('span', { class: 'nxp-tag banned' }, 'BANNED'));
-            } else {
-                line.textContent = 'Not claimed yet — role will be stored as pending.';
-            }
-            wrap.appendChild(line);
-        }
+        var line = el('div', { class: 'nxp-lookup-result nxp-lookup-live' });
+        wrap.appendChild(line);
+        updateLookupLine();
 
         if (S.roleLastResult) {
             wrap.appendChild(el('div', { class: 'nxp-status-box', style: 'margin-top:16px' },
