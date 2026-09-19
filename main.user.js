@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.4
+// @version      1.0.5
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -31,6 +31,8 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rounded-corners.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/gate.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js
@@ -405,6 +407,8 @@
         if (window.NX.features.offsale) window.NX.features.offsale.apply();
         if (window.NX.settings.get('explorer')) window.NX.features.explorer.apply();
         if (window.NX.settings.get('customBackground')) window.NX.features.customBackground.apply();
+        if (window.NX.settings.get('customLogo')) window.NX.features.customLogo.apply();
+        if (window.NX.settings.get('roundedCorners')) window.NX.features.roundedCorners.apply();
         if (window.NX.settings.get('nexusPanel')) window.NX.features.nexusPanel.apply();
         if (window.NX.features.announcement) window.NX.features.announcement.apply();
     }
