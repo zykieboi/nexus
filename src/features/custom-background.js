@@ -18,7 +18,9 @@
         x: 'nx_bg_x',
         y: 'nx_bg_y',
         scale: 'nx_bg_scale',
-        locked: 'nx_bg_locked'
+        locked: 'nx_bg_locked',
+        px: 'nx_bg_panel_x',
+        py: 'nx_bg_panel_y'
     };
 
     function isDarkTheme() {
@@ -31,9 +33,7 @@
         return v === undefined || v === null ? fallback : v;
     }
 
-    function set(k, v) {
-        GM_setValue(k, v);
-    }
+    function set(k, v) { GM_setValue(k, v); }
 
     function num(k, fallback) {
         var v = parseFloat(get(k, fallback));
@@ -50,6 +50,16 @@
     function getY() { return num(KEY.y, 0); }
     function getScale() { return Math.max(0.3, Math.min(3, num(KEY.scale, 1))); }
     function isLocked() { return get(KEY.locked, false) === true; }
+
+    function getPanelX() {
+        var v = get(KEY.px, null);
+        return v === null || v === '' ? null : parseFloat(v);
+    }
+
+    function getPanelY() {
+        var v = get(KEY.py, null);
+        return v === null || v === '' ? null : parseFloat(v);
+    }
 
     function detectType(url) {
         if (!url) return 'image';
@@ -70,7 +80,6 @@
         layer.style.transform =
             'translate(' + x + 'px,' + y + 'px) scale(' + scale + ')';
         layer.style.filter = blur > 0 ? ('blur(' + blur + 'px)') : 'none';
-        layer.style.opacity = '1';
     }
 
     function buildLayer() {
@@ -121,19 +130,10 @@
             media.style.objectFit = 'contain';
             media.style.background = getColor();
         } else if (mode === 'tile') {
-            media.style.objectFit = 'none';
-            media.style.minWidth = 'auto';
-            media.style.minHeight = 'auto';
-            media.style.transform = 'none';
-            media.style.top = '0';
-            media.style.left = '0';
-            media.style.width = 'auto';
-            media.style.height = 'auto';
-            media.style.background = 'transparent';
+            media.style.display = 'none';
             layer.style.background = 'url("' + url + '")';
             layer.style.backgroundRepeat = 'repeat';
             layer.style.backgroundSize = 'auto';
-            media.style.display = 'none';
         }
 
         if (media.style.display !== 'none') layer.appendChild(media);
@@ -189,62 +189,6 @@
         if (s) s.remove();
     }
 
-    var dragging = false;
-    var dragStart = null;
-    var dragOrigin = null;
-
-    function startDrag(e) {
-        if (isLocked()) return;
-        var layer = getLayer();
-        if (!layer) return;
-        dragging = true;
-        dragStart = { x: e.clientX, y: e.clientY };
-        dragOrigin = { x: getX(), y: getY() };
-        layer.style.transition = 'none';
-        document.body.style.cursor = 'grabbing';
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    function moveDrag(e) {
-        if (!dragging) return;
-        var layer = getLayer();
-        if (!layer) return;
-        var dx = e.clientX - dragStart.x;
-        var dy = e.clientY - dragStart.y;
-        layer.style.transform =
-            'translate(' + (dragOrigin.x + dx) + 'px,' + (dragOrigin.y + dy) + 'px) scale(' + getScale() + ')';
-    }
-
-    function endDrag(e) {
-        if (!dragging) return;
-        dragging = false;
-        document.body.style.cursor = '';
-        var layer = getLayer();
-        if (layer) {
-            layer.style.transition = 'transform 0.08s linear';
-        }
-        var dx = e.clientX - dragStart.x;
-        var dy = e.clientY - dragStart.y;
-        set(KEY.x, dragOrigin.x + dx);
-        set(KEY.y, dragOrigin.y + dy);
-    }
-
-    function attachDrag() {
-        document.addEventListener('mousedown', function(e) {
-            if (isLocked()) return;
-            if (e.button !== 0) return;
-            if (e.target.closest && e.target.closest('#' + PANEL_ID)) return;
-            if (e.target.closest && e.target.closest('a, button, input, select, textarea, [role="button"]')) return;
-            if (e.target.closest && e.target.closest('[class*="navbar"], nav, .card, [class*="card-"]')) return;
-            if (e.target.closest && e.target.closest('[class*="container-"], [class*="content-"], [class*="wrapper-"]')) return;
-            if (e.target !== document.body && e.target !== document.documentElement) return;
-            startDrag(e);
-        });
-        document.addEventListener('mousemove', moveDrag);
-        document.addEventListener('mouseup', endDrag);
-    }
-
     function ensurePanelStyle() {
         var old = document.getElementById(PANEL_CSS_ID);
         if (old) old.remove();
@@ -257,8 +201,10 @@
         var s = document.createElement('style');
         s.id = PANEL_CSS_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:fixed;bottom:16px;right:16px;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:280px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);}',
-            '#' + PANEL_ID + ' .nxbg-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;}',
+            '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:280px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);transition:none;user-select:none;}',
+            '#' + PANEL_ID + '.nxbg-dragging{transition:none;}',
+            '#' + PANEL_ID + ' .nxbg-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;cursor:grab;padding:2px 0;}',
+            '#' + PANEL_ID + ' .nxbg-head:active{cursor:grabbing;}',
             '#' + PANEL_ID + ' .nxbg-min{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
             '#' + PANEL_ID + ' .nxbg-min:hover{color:' + text + ';}',
             '#' + PANEL_ID + ' input[type=text]{width:100%;background:' + inputBg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12px;box-sizing:border-box;margin-bottom:8px;}',
@@ -280,6 +226,78 @@
         document.head.appendChild(s);
     }
 
+    function clampPanelPosition(panel) {
+        var rect = panel.getBoundingClientRect();
+        var x = rect.left;
+        var y = rect.top;
+        var maxX = window.innerWidth - rect.width - 4;
+        var maxY = window.innerHeight - rect.height - 4;
+        var newX = Math.max(4, Math.min(maxX, x));
+        var newY = Math.max(4, Math.min(maxY, y));
+        panel.style.left = newX + 'px';
+        panel.style.top = newY + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+        return { x: newX, y: newY };
+    }
+
+    function applyPanelPosition(panel) {
+        var x = getPanelX();
+        var y = getPanelY();
+        if (x === null || y === null) {
+            panel.style.right = '16px';
+            panel.style.bottom = '16px';
+            panel.style.left = 'auto';
+            panel.style.top = 'auto';
+            return;
+        }
+        panel.style.left = x + 'px';
+        panel.style.top = y + 'px';
+        panel.style.right = 'auto';
+        panel.style.bottom = 'auto';
+        requestAnimationFrame(function() {
+            clampPanelPosition(panel);
+        });
+    }
+
+    function attachPanelDrag(panel) {
+        var head = panel.querySelector('.nxbg-head');
+        if (!head) return;
+        var dragging = false;
+        var offsetX = 0;
+        var offsetY = 0;
+
+        head.addEventListener('mousedown', function(e) {
+            if (e.button !== 0) return;
+            if (e.target.closest('.nxbg-min')) return;
+            dragging = true;
+            var rect = panel.getBoundingClientRect();
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+            panel.classList.add('nxbg-dragging');
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            var x = e.clientX - offsetX;
+            var y = e.clientY - offsetY;
+            panel.style.left = x + 'px';
+            panel.style.top = y + 'px';
+            panel.style.right = 'auto';
+            panel.style.bottom = 'auto';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (!dragging) return;
+            dragging = false;
+            panel.classList.remove('nxbg-dragging');
+            var clamped = clampPanelPosition(panel);
+            set(KEY.px, clamped.x);
+            set(KEY.py, clamped.y);
+        });
+    }
+
     function buildPanel() {
         var old = document.getElementById(PANEL_ID);
         if (old) old.remove();
@@ -298,9 +316,15 @@
         min.className = 'nxbg-min';
         min.textContent = '\u2013';
         min.title = 'Minimize';
-        min.onclick = function() {
+        min.onclick = function(e) {
+            e.stopPropagation();
             panel.classList.toggle('nxbg-collapsed');
             min.textContent = panel.classList.contains('nxbg-collapsed') ? '+' : '\u2013';
+            requestAnimationFrame(function() {
+                var clamped = clampPanelPosition(panel);
+                if (getPanelX() !== null) set(KEY.px, clamped.x);
+                if (getPanelY() !== null) set(KEY.py, clamped.y);
+            });
         };
 
         head.appendChild(title);
@@ -414,7 +438,7 @@
         var lockRow = document.createElement('div');
         lockRow.className = 'nxbg-row';
         var lockLabel = document.createElement('label');
-        lockLabel.textContent = 'Lock drag';
+        lockLabel.textContent = 'Lock background drag';
         lockLabel.style.margin = '6px 0 2px';
         var lockInput = document.createElement('input');
         lockInput.type = 'checkbox';
@@ -480,11 +504,14 @@
 
         var hint = document.createElement('div');
         hint.className = 'nxbg-hint';
-        hint.textContent = 'Drag the background by clicking and holding on any empty area of the page.';
+        hint.textContent = 'Drag this panel by its title bar to move it.';
         body.appendChild(hint);
 
         panel.appendChild(body);
         document.body.appendChild(panel);
+
+        applyPanelPosition(panel);
+        attachPanelDrag(panel);
     }
 
     function rebuild() {
@@ -524,7 +551,6 @@
                 buildLayer();
             }
             buildPanel();
-            attachDrag();
             watchUrl();
         },
         teardown: function() {
