@@ -24,11 +24,11 @@ const BAD_UA_PATTERNS = [
     /node-fetch/i, /postmanruntime/i, /insomnia/i, /masscan/i, /nmap/i,
     /zgrab/i, /gobuster/i, /nikto/i, /sqlmap/i, /nikto/i, /nuclei/i
 ];
+
 const SUSPICIOUS_PATHS = [
     /^\/wp-/i, /^\/phpmyadmin/i, /^\/\.env/i, /^\/\.git/i, /^\/admin\.php/i,
     /^\/xmlrpc\.php/i, /^\/cgi-bin/i, /^\/vendor/i, /^\/\.well-known\/security/i
 ];
-const TRUSTED_PATHS = ['/claim', '/me', '/config', '/admin/'];
 
 function rankOf(role) {
     return ROLE_RANK[role] || 0;
@@ -119,14 +119,6 @@ function badUserAgent(ua) {
 
 function suspiciousPath(pathname) {
     for (const re of SUSPICIOUS_PATHS) if (re.test(pathname)) return true;
-    return false;
-}
-
-function isTrustedPath(pathname) {
-    for (const p of TRUSTED_PATHS) {
-        if (pathname === p) return true;
-        if (pathname.startsWith(p) && (pathname[p.length] === '/' || pathname[p.length] === undefined)) return true;
-    }
     return false;
 }
 
@@ -228,10 +220,6 @@ export default {
 
         if (suspiciousPath(url.pathname)) {
             await logSecurity(env, { action: 'security.scan', meta: url.pathname + ' — ' + ip });
-            return json({ error: 'not found' }, 404, cors);
-        }
-
-        if (!isTrustedPath(url.pathname)) {
             return json({ error: 'not found' }, 404, cors);
         }
 
