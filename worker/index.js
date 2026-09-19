@@ -10,27 +10,6 @@ const ROLE_RANK = {
     dev: 4
 };
 
-const MAX_BODY_BYTES = 8192;
-const IP_RATE_LIMIT = 120;
-const IP_RATE_WINDOW_MS = 60000;
-const GLOBAL_RATE_LIMIT = 3000;
-const GLOBAL_RATE_WINDOW_MS = 60000;
-const CLAIM_PER_IP_LIMIT = 25;
-const CLAIM_PER_IP_WINDOW_MS = 600000;
-const MAX_TOKENS_PER_IP = 25;
-
-const BAD_UA_PATTERNS = [
-    /curl/i, /wget/i, /python-requests/i, /python-urllib/i, /scrapy/i,
-    /libwww-perl/i, /go-http-client/i, /java\//i, /okhttp/i, /axios\//i,
-    /node-fetch/i, /postmanruntime/i, /insomnia/i, /masscan/i, /nmap/i,
-    /zgrab/i, /gobuster/i, /nikto/i, /sqlmap/i, /nuclei/i
-];
-
-const SUSPICIOUS_PATHS = [
-    /^\/wp-/i, /^\/phpmyadmin/i, /^\/\.env/i, /^\/\.git/i, /^\/admin\.php/i,
-    /^\/xmlrpc\.php/i, /^\/cgi-bin/i, /^\/vendor/i, /^\/\.well-known\/security/i
-];
-
 function rankOf(role) {
     return ROLE_RANK[role] || 0;
 }
@@ -64,96 +43,25 @@ function migrate(user) {
     return user;
 }
 
-async function checkRateLimit(env, keyName, limit, windowMs) {
-    const key = 'rl:' + keyName;
+async function checkRateLimit(env, token) {
+    const key = 'ratelimit:' + token;
     const now = Date.now();
     let entry = await env.NEXUS_KV.get(key, 'json');
 
     if (!entry || typeof entry.resetAt !== 'number' || entry.resetAt <= now) {
-        entry = { count: 1, resetAt: now + windowMs };
-        await env.NEXUS_KV.put(key, JSON.stringify(entry), { expirationTtl: Math.ceil(windowMs / 1000) + 60 });
+        entry = { count: 1, resetAt: now + ADMIN_RATE_WINDOW_MS };
+        await env.NEXUS_KV.put(key, JSON.stringify(entry), { expirationTtl: 120 });
         return null;
     }
 
-    if (entry.count >= limit) {
+    if (entry.count >= ADMIN_RATE_LIMIT) {
         const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
         return { retryAfter };
     }
 
     entry.count += 1;
-    await env.NEXUS_KV.put(key, JSON.stringify(entry), { expirationTtl: Math.ceil(windowMs / 1000) + 60 });
+    await env.NEXUS_KV.put(key, JSON.stringify(entry), { expirationTtl: 120 });
     return null;
-}
-
-async function checkIpRateLimit(env, ip) {
-    return checkRateLimit(env, 'ip:' + ip, IP_RATE_LIMIT, IP_RATE_WINDOW_MS);
-}
-
-async function checkGlobalRateLimit(env) {
-    const bucket = Math.floor(Date.now() / GLOBAL_RATE_WINDOW_MS);
-    return checkRateLimit(env, 'global:' + bucket, GLOBAL_RATE_LIMIT, GLOBAL_RATE_WINDOW_MS);
-}
-
-async function checkClaimRateLimit(env, ip) {
-    return checkRateLimit(env, 'claim:' + ip, CLAIM_PER_IP_LIMIT, CLAIM_PER_IP_WINDOW_MS);
-}
-
-async function countTokensFromIp(env, ip) {
-    const key = 'tokensfrom:' + ip;
-    const count = await env.NEXUS_KV.get(key, 'json');
-    return count && typeof count.n === 'number' ? count.n : 0;
-}
-
-async function incrTokensFromIp(env, ip) {
-    const key = 'tokensfrom:' + ip;
-    const count = await env.NEXUS_KV.get(key, 'json');
-    const next = { n: (count && typeof count.n === 'number' ? count.n : 0) + 1 };
-    await env.NEXUS_KV.put(key, JSON.stringify(next), { expirationTtl: 86400 });
-    return next.n;
-}
-
-function badUserAgent(ua) {
-    // Empty UA is allowed — privacy browsers send it, and blocking them was
-    // silently dropping legitimate users.
-    if (!ua) return false;
-    for (const re of BAD_UA_PATTERNS) if (re.test(ua)) return true;
-    return false;
-}
-
-function suspiciousPath(pathname) {
-    for (const re of SUSPICIOUS_PATHS) if (re.test(pathname)) return true;
-    return false;
-}
-
-function getIp(request) {
-    return request.headers.get('cf-connecting-ip')
-        || request.headers.get('x-real-ip')
-        || request.headers.get('x-forwarded-for')?.split(',')[0].trim()
-        || 'unknown';
-}
-
-async function bodyTooLarge(request) {
-    const len = request.headers.get('content-length');
-    if (!len) return false;
-    const n = parseInt(len, 10);
-    return !isNaN(n) && n > MAX_BODY_BYTES;
-}
-
-async function logSecurity(env, entry) {
-    try {
-        await env.NEXUS_KV.put(logKey(), JSON.stringify({
-            ts: Date.now(),
-            actor: 'security',
-            action: entry.action,
-            meta: entry.meta
-        }));
-    } catch (e) {}
-    await sendDiscord(env, {
-        ts: Date.now(),
-        actor: 'security',
-        action: entry.action,
-        meta: entry.meta
-    });
 }
 
 function isExpired(user) {
@@ -206,19 +114,6 @@ function requireRank(user, minRole) {
     return rankOf(user.role) >= rankOf(minRole);
 }
 
-// Paginate a KV list() call — list() returns at most 1000 keys per page and
-// truncates silently if you don't loop on list_complete.
-async function listAllKeys(env, prefix) {
-    const keys = [];
-    let cursor = undefined;
-    do {
-        const page = await env.NEXUS_KV.list({ prefix, cursor });
-        for (const k of page.keys) keys.push(k);
-        cursor = page.list_complete ? undefined : page.cursor;
-    } while (cursor);
-    return keys;
-}
-
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
@@ -231,89 +126,17 @@ export default {
 
         if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
 
-        const ip = getIp(request);
-        const ua = request.headers.get('user-agent') || '';
-
-        if (suspiciousPath(url.pathname)) {
-            await logSecurity(env, { action: 'security.scan', meta: url.pathname + ' — ' + ip });
-            return json({ error: 'not found' }, 404, cors);
-        }
-
-        if (badUserAgent(ua)) {
-            console.log('blocked-ua', { ip, ua: ua.slice(0, 120), path: url.pathname });
-            return json({ error: 'forbidden' }, 403, cors);
-        }
-
-        if (await bodyTooLarge(request)) {
-            await logSecurity(env, { action: 'security.body-too-large', meta: ip + ' — ' + (request.headers.get('content-length') || '?') });
-            return json({ error: 'payload too large' }, 413, cors);
-        }
-
-        const globalLimit = await checkGlobalRateLimit(env);
-        if (globalLimit) {
-            await logSecurity(env, { action: 'security.global-rate-limit', meta: ip });
-            return json({ error: 'server busy', retryAfter: globalLimit.retryAfter }, 429, cors);
-        }
-
-        const ipLimit = await checkIpRateLimit(env, ip);
-        if (ipLimit) {
-            await logSecurity(env, { action: 'security.ip-rate-limit', meta: ip });
-            return json({ error: 'rate limited', retryAfter: ipLimit.retryAfter }, 429, cors);
-        }
-
         const token = request.headers.get('x-nexus-token');
-
-        if (url.pathname === '/claim' && request.method === 'POST') {
-            console.log('claim-attempt', {
-                ip,
-                ua: ua.slice(0, 80),
-                hasToken: !!token,
-                tokenLen: token ? token.length : 0,
-                tokenShape: token ? /^[a-f0-9]+$/i.test(token) : false
-            });
-        }
-
-        if (!token || token.length < 32 || token.length > 128 || !/^[a-f0-9]+$/i.test(token)) {
-            console.log('reject-missing-token', { path: url.pathname, ip, hasToken: !!token });
-            return json({ error: 'missing token' }, 401, cors);
-        }
+        if (!token || token.length < 32) return json({ error: 'missing token' }, 401, cors);
 
         const key = 'user:' + token;
         let user = await env.NEXUS_KV.get(key, 'json');
 
         if (url.pathname === '/claim' && request.method === 'POST') {
-            const claimLimit = await checkClaimRateLimit(env, ip);
-            if (claimLimit) {
-                console.log('reject-claim-rate-limit', { ip, retryAfter: claimLimit.retryAfter });
-                await logSecurity(env, { action: 'security.claim-rate-limit', meta: ip });
-                return json({ error: 'rate limited', retryAfter: claimLimit.retryAfter }, 429, cors);
-            }
-
-            if (!user) {
-                const tokenCount = await countTokensFromIp(env, ip);
-                if (tokenCount >= MAX_TOKENS_PER_IP) {
-                    console.log('reject-too-many-tokens', { ip, tokenCount });
-                    await logSecurity(env, { action: 'security.too-many-claims', meta: ip + ' — ' + tokenCount });
-                    return json({ error: 'too many tokens from this ip' }, 429, cors);
-                }
-            }
-
-            let body;
-            try { body = await request.json(); } catch (e) {
-                console.log('reject-bad-json', { ip });
-                return json({ error: 'bad json' }, 400, cors);
-            }
-
+            const body = await request.json();
             const aisakaId = parseInt(body.aisakaId, 10);
             const username = String(body.username || '').slice(0, 64);
-            if (!aisakaId || aisakaId < 1 || aisakaId > Number.MAX_SAFE_INTEGER) {
-                console.log('reject-invalid-id', { ip, raw: body.aisakaId });
-                return json({ error: 'invalid id' }, 400, cors);
-            }
-            if (!username) {
-                console.log('reject-invalid-username', { ip, aisakaId });
-                return json({ error: 'invalid username' }, 400, cors);
-            }
+            if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
 
             const pendingKey = 'pending_role:' + aisakaId;
             const pending = await env.NEXUS_KV.get(pendingKey, 'json');
@@ -332,23 +155,7 @@ export default {
                     });
                 }
                 user = await applyExpiry(env, key, user);
-                user.lastSeen = Date.now();
-
-                // Log repeat claims for everyone (dev included), throttled to
-                // once per 24h so page loads don't flood the log.
-                if (!user.lastClaimLog || Date.now() - user.lastClaimLog > 86400000) {
-                    user.lastClaimLog = Date.now();
-                    await logAction(env, {
-                        ts: Date.now(),
-                        actor: 'system',
-                        action: 'user.claim.repeat',
-                        meta: (user.username || String(user.aisakaId)) + ' #' + user.aisakaId +
-                              (DEV_IDS.includes(user.aisakaId) ? ' [dev]' : '')
-                    });
-                }
-
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
-                console.log('claim-existing', { aisakaId: user.aisakaId, role: user.role });
                 return json({ ok: true, alreadyClaimed: true, role: user.role, isAdmin: user.isAdmin }, 200, cors);
             }
 
@@ -366,21 +173,15 @@ export default {
                 firstSeen: Date.now(),
                 lastSeen: Date.now(),
                 banned: false,
-                lastDailyLog: 0,
-                lastClaimLog: Date.now(),
-                firstIp: ip
+                lastDailyLog: 0
             };
             await env.NEXUS_KV.put(key, JSON.stringify(user));
-            await incrTokensFromIp(env, ip);
-
-            console.log('claim-new', { aisakaId, username, role, ip });
 
             await logAction(env, {
                 ts: Date.now(),
                 actor: 'system',
                 action: 'user.claim',
-                meta: username + ' #' + aisakaId + ' [' + role + ']' +
-                      (DEV_IDS.includes(aisakaId) ? ' [dev]' : '')
+                meta: username + ' #' + aisakaId + ' [' + role + ']'
             });
 
             return json({ ok: true, claimed: true, role, isAdmin: user.isAdmin }, 200, cors);
@@ -401,8 +202,7 @@ export default {
                 ts: Date.now(),
                 actor: 'system',
                 action: 'user.active',
-                meta: user.username + ' #' + user.aisakaId +
-                      (DEV_IDS.includes(user.aisakaId) ? ' [dev]' : '')
+                meta: user.username + ' #' + user.aisakaId
             });
         }
 
@@ -424,22 +224,25 @@ export default {
         }
 
         if (url.pathname.startsWith('/admin/')) {
-            if (!requireRank(user, 'panel')) return json({ error: 'forbidden' }, 403, cors);
+            if (!requireRank(user, 'panel')) {
+                return json({ error: 'forbidden' }, 403, cors);
+            }
 
-            const limited = await checkRateLimit(env, 'admin:' + token, ADMIN_RATE_LIMIT, ADMIN_RATE_WINDOW_MS);
-            if (limited) return json({ error: 'rate limited', retryAfter: limited.retryAfter }, 429, cors);
+            const limited = await checkRateLimit(env, token);
+            if (limited) {
+                return json({ error: 'rate limited', retryAfter: limited.retryAfter }, 429, cors);
+            }
 
             if (url.pathname === '/admin/users' && request.method === 'GET') {
                 if (!requireRank(user, 'moderator')) return json({ error: 'forbidden' }, 403, cors);
-                const keys = await listAllKeys(env, 'user:');
+
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 const users = [];
-                for (const k of keys) {
+                for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     u = migrate(u);
-                    if (isExpired(u)) {
-                        u = await applyExpiry(env, k.name, u);
-                    }
+                    u = await applyExpiry(env, k.name, u);
                     users.push(Object.assign(publicUser(u), {
                         tokenPreview: k.name.slice(6, 20) + '…'
                     }));
@@ -449,14 +252,14 @@ export default {
             }
 
             if (url.pathname === '/admin/logs' && request.method === 'GET') {
-                const keys = await listAllKeys(env, 'log:');
+                const list = await env.NEXUS_KV.list({ prefix: 'log:' });
                 const logs = [];
-                for (const k of keys) {
+                for (const k of list.keys) {
                     const l = await env.NEXUS_KV.get(k.name, 'json');
                     if (l) logs.push(l);
                 }
                 logs.sort((a, b) => b.ts - a.ts);
-                return json({ logs: logs.slice(0, 500) }, 200, cors);
+                return json({ logs: logs.slice(0, 200) }, 200, cors);
             }
 
             if (url.pathname === '/admin/tokens' && request.method === 'GET') {
@@ -465,9 +268,9 @@ export default {
                 if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
                 if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
 
-                const keys = await listAllKeys(env, 'user:');
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 const tokens = [];
-                for (const k of keys) {
+                for (const k of list.keys) {
                     const u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     tokens.push({
@@ -493,13 +296,15 @@ export default {
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
                 if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
 
-                const keys = await listAllKeys(env, 'user:');
-                for (const k of keys) {
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
                         u = migrate(u);
-                        if (DEV_IDS.includes(u.aisakaId)) return json({ error: 'cannot change dev via panel' }, 400, cors);
+                        if (DEV_IDS.includes(u.aisakaId)) {
+                            return json({ error: 'cannot change dev via panel' }, 400, cors);
+                        }
                         u.role = nextRole;
                         u.isAdmin = rankOf(nextRole) >= rankOf('admin');
                         await env.NEXUS_KV.put(k.name, JSON.stringify(u));
@@ -526,11 +331,13 @@ export default {
                 const nextRole = String(body.role || '');
                 if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
                 if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
-                if (DEV_IDS.includes(aisakaId)) return json({ error: 'cannot change dev via panel' }, 400, cors);
+                if (DEV_IDS.includes(aisakaId)) {
+                    return json({ error: 'cannot change dev via panel' }, 400, cors);
+                }
 
-                const keys = await listAllKeys(env, 'user:');
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 let updated = null;
-                for (const k of keys) {
+                for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (parseInt(u.aisakaId, 10) === aisakaId) {
@@ -569,6 +376,7 @@ export default {
 
             if (url.pathname === '/admin/announce' && request.method === 'POST') {
                 if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const text = String(body.text || '').slice(0, 500);
                 const isTest = !!body.test;
@@ -590,6 +398,7 @@ export default {
 
             if (url.pathname === '/admin/ban' && request.method === 'POST') {
                 if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
@@ -597,8 +406,8 @@ export default {
                 const reason = body.reason ? String(body.reason).slice(0, 200) : null;
                 const expiresAt = body.expiresAt ? parseInt(body.expiresAt, 10) : null;
 
-                const keys = await listAllKeys(env, 'user:');
-                for (const k of keys) {
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
@@ -606,7 +415,9 @@ export default {
                         if (rankOf(u.role) >= rankOf('admin') && !requireRank(user, 'dev')) {
                             return json({ error: 'cannot ban admin' }, 403, cors);
                         }
-                        if (DEV_IDS.includes(u.aisakaId)) return json({ error: 'cannot ban dev' }, 400, cors);
+                        if (DEV_IDS.includes(u.aisakaId)) {
+                            return json({ error: 'cannot ban dev' }, 400, cors);
+                        }
                         u.banned = true;
                         if (reason) u.banReason = reason;
                         else delete u.banReason;
@@ -627,12 +438,13 @@ export default {
 
             if (url.pathname === '/admin/unban' && request.method === 'POST') {
                 if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
 
-                const keys = await listAllKeys(env, 'user:');
-                for (const k of keys) {
+                const list = await env.NEXUS_KV.list({ prefix: 'user:' });
+                for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
                     if (k.name.slice(6, 20) + '…' === preview) {
@@ -655,6 +467,7 @@ export default {
 
             if (url.pathname === '/admin/config' && request.method === 'POST') {
                 if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+
                 const body = await request.json();
                 const current = (await env.NEXUS_KV.get('config', 'json')) || {};
                 const next = { ...current, ...body };
@@ -674,12 +487,11 @@ export default {
 };
 
 function publicUser(u) {
-    const role = u.role || (u.isAdmin ? 'admin' : 'user');
     return {
         aisakaId: u.aisakaId,
         username: u.username,
-        role,
-        isAdmin: rankOf(role) >= rankOf('admin'),
+        role: u.role || (u.isAdmin ? 'admin' : 'user'),
+        isAdmin: rankOf(u.role) >= rankOf('admin'),
         banned: !!u.banned,
         banReason: u.banReason || null,
         banExpiresAt: u.banExpiresAt || null,
