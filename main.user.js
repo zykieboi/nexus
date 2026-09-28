@@ -1,23 +1,21 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.5.1
+// @version      1.0.6.0
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
-// @match        https://www.aisaka.me/*
-// @match        aisaka.me/*
+// @match        https://octane.wtf/*
+// @match        https://*.octane.wtf/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
+// @connect      octane.wtf
 // @connect      nexus-admin.masonreed-exe.workers.dev
-// @connect      www.aisaka.me
-// @connect      aisaka.me
-// @connect      assetdelivery.aisaka.me
-// @connect      clscdn.lol
+// @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
-// @run-at       document-end
+// @run-at       document-start
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js
@@ -27,12 +25,10 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/trade-2020.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/offsale.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rounded-corners.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/gate.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js
@@ -40,217 +36,45 @@
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
 
-    var style = document.createElement('style');
-    style.textContent = `
-        #nx-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.6);
-            z-index: 999999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #nx-modal {
-            background: #232527;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 520px;
-            max-height: 78vh;
-            color: #e0e0e0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            border: 1px solid #343638;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        #nx-modal .nx-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            padding: 22px 26px 14px;
-            border-bottom: 1px solid #343638;
-            flex-shrink: 0;
-        }
-        #nx-modal .title-block {
-            display: flex;
-            flex-direction: column;
-        }
-        #nx-modal h2 {
-            margin: 0;
-            font-size: 22px;
-            font-weight: 600;
-            color: #fff;
-            letter-spacing: -0.2px;
-        }
-        #nx-modal .sub {
-            color: #7a7d80;
-            font-size: 13px;
-            margin-top: 3px;
-        }
-        #nx-modal .close {
-            font-size: 24px;
-            line-height: 1;
-            cursor: pointer;
-            color: #6a6d70;
-            background: none;
-            border: none;
-            padding: 0 4px;
-            margin-top: -2px;
-            transition: color 0.15s;
-        }
-        #nx-modal .close:hover {
-            color: #fff;
-        }
-        #nx-modal .nx-content {
-            padding: 8px 26px 4px;
-            overflow-y: auto;
-            flex: 1 1 auto;
-        }
-        #nx-modal .nx-content::-webkit-scrollbar {
-            width: 8px;
-        }
-        #nx-modal .nx-content::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        #nx-modal .nx-content::-webkit-scrollbar-thumb {
-            background: #3a3d40;
-            border-radius: 4px;
-        }
-        #nx-modal .nx-content::-webkit-scrollbar-thumb:hover {
-            background: #4a4d50;
-        }
-        .nx-cat {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-            color: #7a7d80;
-            margin: 20px 0 6px 0;
-            padding-bottom: 6px;
-            border-bottom: 1px solid #2f3133;
-        }
-        .nx-cat.first {
-            margin-top: 12px;
-        }
-        .nx-row {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            padding: 11px 10px;
-            gap: 16px;
-            border-radius: 6px;
-            transition: background 0.12s;
-        }
-        .nx-row:hover {
-            background: #2a2c2e;
-        }
-        .nx-row-text {
-            flex: 1;
-            min-width: 0;
-        }
-        .nx-row-text .nx-label {
-            font-size: 14px;
-            font-weight: 500;
-            color: #e8e8e8;
-            display: block;
-        }
-        .nx-row-text .nx-desc {
-            font-size: 12px;
-            color: #85888b;
-            display: block;
-            margin-top: 3px;
-            line-height: 1.45;
-        }
-        .nx-toggle {
-            position: relative;
-            width: 40px;
-            height: 22px;
-            flex-shrink: 0;
-            cursor: pointer;
-            margin-top: 1px;
-        }
-        .nx-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .nx-toggle .slider {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: #3d4043;
-            border-radius: 22px;
-            transition: background 0.2s;
-        }
-        .nx-toggle .slider::before {
-            content: '';
-            position: absolute;
-            height: 16px;
-            width: 16px;
-            left: 3px;
-            top: 3px;
-            background: #c8cacc;
-            border-radius: 50%;
-            transition: transform 0.2s, background 0.2s;
-        }
-        .nx-toggle input:checked + .slider {
-            background: #22a24a;
-        }
-        .nx-toggle input:checked + .slider::before {
-            transform: translateX(18px);
-            background: #fff;
-        }
-        #nx-modal .nx-footer {
-            padding: 14px 26px 20px;
-            border-top: 1px solid #343638;
-            flex-shrink: 0;
-        }
-        #nx-modal .save-btn {
-            padding: 10px 24px;
-            background: #0a84ff;
-            color: #fff;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.15s;
-        }
-        #nx-modal .save-btn:hover {
-            background: #0a76e0;
-        }
-    `;
-    document.head.appendChild(style);
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+    window.NX.ui = window.NX.ui || {};
+    window.NX.role = null;
 
-    function getMeId() {
-        var cached = parseInt(localStorage.getItem('nx_me_id') || '0', 10);
-        if (cached) return cached;
+    var ADMIN_HASH = '#nexus-admin';
+    var hosts = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
+
+    hosts.forEach(function (host) {
+        GM_xmlhttpRequest({
+            method: 'HEAD',
+            url: 'https://' + host + '/',
+            timeout: 4000,
+            onerror: function () {
+                GM_setValue('nx_host_fail', host);
+            }
+        });
+    });
+
+    function meId() {
+        var id = parseInt(localStorage.getItem('nx_me_id') || '0', 10);
+        if (id) return id;
         try {
-            var me = window.__NEXT_DATA__
-                && window.__NEXT_DATA__.props
+            var u = window.__NEXT_DATA__ && window.__NEXT_DATA__.props
                 && window.__NEXT_DATA__.props.pageProps
                 && window.__NEXT_DATA__.props.pageProps.user;
-            if (me && me.id) {
-                localStorage.setItem('nx_me_id', String(me.id));
-                return me.id;
+            if (u && u.id) {
+                localStorage.setItem('nx_me_id', String(u.id));
+                return u.id;
             }
         } catch (e) {}
-        var link = document.querySelector('a[href*="/users/"][href*="/profile"]');
-        if (link) {
-            var m = (link.getAttribute('href') || '').match(/\/users\/(\d+)\/profile/);
+        var a = document.querySelector('a[href*="/users/"][href*="/profile"]');
+        if (a) {
+            var m = (a.getAttribute('href') || '').match(/\/users\/(\d+)\/profile/);
             if (m) {
-                var id = parseInt(m[1], 10);
+                id = parseInt(m[1], 10);
                 localStorage.setItem('nx_me_id', String(id));
                 return id;
             }
@@ -258,182 +82,225 @@
         return 0;
     }
 
-    function getMeName() {
+    function meName() {
         try {
-            var me = window.__NEXT_DATA__
-                && window.__NEXT_DATA__.props
+            var u = window.__NEXT_DATA__ && window.__NEXT_DATA__.props
                 && window.__NEXT_DATA__.props.pageProps
                 && window.__NEXT_DATA__.props.pageProps.user;
-            if (me && me.name) return me.name;
-            if (me && me.username) return me.username;
+            if (u && (u.name || u.username)) return u.name || u.username;
         } catch (e) {}
-        var el = document.querySelector('.helloMessage-0-2-50 span:last-child');
-        if (el && el.textContent) return el.textContent.trim();
-        var nameEl = document.querySelector('[class*="helloMessage-"] span:last-child');
-        if (nameEl && nameEl.textContent) return nameEl.textContent.trim();
+        var el = document.querySelector('.age-bracket-label-username');
+        if (el && el.textContent) return el.textContent.trim().replace(/^@/, '');
         return '';
     }
 
-    window.NX.getMeId = getMeId;
-    window.NX.getMeName = getMeName;
-    window.NX.role = null;
+    window.NX.getMeId = meId;
+    window.NX.getMeName = meName;
 
     function refreshRole() {
-        if (!window.NX.server || typeof window.NX.server.me !== 'function') return Promise.resolve(null);
-        return window.NX.server.me().then(function(res) {
+        if (!window.NX.server || typeof window.NX.server.me !== 'function') {
+            return Promise.resolve(null);
+        }
+        return window.NX.server.me().then(function (res) {
             if (res && res.status === 200 && res.data && res.data.user) {
-                window.NX.role = res.data.user.role || (res.data.user.isAdmin ? 'admin' : 'user');
+                var u = res.data.user;
+                window.NX.role = u.role || (u.isAdmin ? 'admin' : 'user');
             }
             return window.NX.role;
-        }).catch(function() { return null; });
+        }).catch(function () { return null; });
     }
 
     window.NX.refreshRole = refreshRole;
 
-    function renameRobuxTab() {
-        var selectors = [
-            '.navlinks-0-2-4 .linkEntry-0-2-20',
-            '.navlinksRow-0-2-7 .linkEntry-0-2-20'
-        ];
-        var links = document.querySelectorAll(selectors.join(','));
-        links.forEach(function(tab) {
-            if (tab.dataset.nxRenamed) return;
-            var href = tab.getAttribute('href');
-            var text = (tab.textContent || '').trim();
-            if (href !== '/transactions' && text !== 'Robux') return;
-            tab.dataset.nxRenamed = '1';
-            tab.textContent = 'Nexus';
-            tab.removeAttribute('href');
-            tab.style.cursor = 'pointer';
-        });
+    function sidebarList() {
+        return document.querySelector('#left-navigation-container .left-col-list')
+            || document.querySelector('.left-col-list');
     }
 
-    document.addEventListener('click', function(e) {
-        var target = e.target.closest('[data-nx-renamed="1"]');
-        if (!target) return;
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        window.NX.ui.modal.build();
-    }, true);
-
-    function makeLogoClickable() {
-        document.querySelectorAll('.imgDesktop-0-2-12, .imgMobile-0-2-13').forEach(function(logo) {
-            if (logo.dataset.nxLogo) return;
-            logo.dataset.nxLogo = '1';
-            logo.style.cursor = 'pointer';
-            logo.addEventListener('click', function() {
-                window.location.href = '/home';
-            });
-        });
-    }
-
-    function injectPanelLink() {
-        var existing = document.getElementById('nx-panel-link');
-
-        if (window.NX.role !== 'dev' || !window.NX.settings.get('nexusPanel')) {
-            if (existing) existing.remove();
-            return;
-        }
-        if (existing) return;
-
-        var sidebarLinks = document.querySelectorAll('a[href="/home"], a[href="/groups"], a[href="/trades"]');
-        var card = null;
-        for (var i = 0; i < sidebarLinks.length; i++) {
-            var p = sidebarLinks[i].parentNode;
-            if (p && p.className && /card-0-2-/.test(p.className)) {
-                card = p;
-                break;
+    function groupsItem(list) {
+        var links = list.querySelectorAll('a');
+        for (var i = 0; i < links.length; i++) {
+            if (links[i].getAttribute('href') === '/groups') {
+                return links[i].closest('li');
             }
         }
-        if (!card) return;
+        return null;
+    }
 
-        var anyLink = card.querySelector('a[class*="link-0-2-"]');
-        var linkClass = anyLink ? anyLink.className : 'link-0-2-162';
-        var wrapperClass = 'wrapper-0-2-161 hover-icon-nav-group';
-        var entryClass = 'linkEntry-0-2-159';
-        var nameClass = 'name-0-2-160';
+    function makeItem(id, icon, label, href, onClick) {
+        var li = document.createElement('li');
+        var a = document.createElement('a');
+        a.className = 'dynamic-overflow-container text-nav';
+        a.id = id;
+        a.href = href || '/#';
 
-        if (anyLink) {
-            var w = anyLink.querySelector('[class*="wrapper-0-2-"]');
-            if (w) wrapperClass = w.className;
-            var e = anyLink.querySelector('[class*="linkEntry-0-2-"]');
-            if (e) entryClass = e.className;
-            var n = anyLink.querySelector('[class*="name-0-2-"]');
-            if (n) nameClass = n.className;
+        var wrap = document.createElement('div');
+        var ic = document.createElement('span');
+        ic.className = icon;
+        wrap.appendChild(ic);
+
+        var txt = document.createElement('span');
+        txt.className = 'font-header-2 dynamic-ellipsis-item';
+        txt.textContent = label;
+
+        a.appendChild(wrap);
+        a.appendChild(txt);
+
+        if (onClick) {
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                onClick();
+            }, true);
         }
+
+        li.appendChild(a);
+        return li;
+    }
+
+    function injectSidebar() {
+        var list = sidebarList();
+        if (!list) return;
+        var anchor = groupsItem(list);
+        if (!anchor) return;
+
+        if (!document.getElementById('nav-nexus')) {
+            var nexus = makeItem('nav-nexus', 'icon-nav-blog', 'Nexus', '/#', function () {
+                window.NX.ui.modal.build();
+            });
+            anchor.parentNode.insertBefore(nexus, anchor.nextSibling);
+        }
+
+        var r = window.NX.role;
+        var isAdmin = r === 'admin' || r === 'dev' || r === 'moderator';
+
+        if (isAdmin && !document.getElementById('nav-nexus-admin')) {
+            var admin = makeItem('nav-nexus-admin', 'icon-nav-group', 'Nexus Admin',
+                '/home' + ADMIN_HASH);
+            var nexusBtn = document.getElementById('nav-nexus');
+            if (nexusBtn && nexusBtn.parentNode) {
+                nexusBtn.parentNode.insertAdjacentElement('afterend', admin);
+            }
+        }
+
+        if (!isAdmin) {
+            var stale = document.getElementById('nav-nexus-admin');
+            if (stale) stale.remove();
+        }
+    }
+
+    function injectHomeButton() {
+        if (document.getElementById('nx-home-btn')) return;
+
+        var dark = false;
+        try { dark = localStorage.getItem('rbx_theme_v1') === 'dark'; } catch (e) {}
 
         var a = document.createElement('a');
-        a.className = linkClass + ' link-nx-panel';
-        a.href = '/home#nexus-admin';
-        a.id = 'nx-panel-link';
-        a.style.cursor = 'pointer';
+        a.id = 'nx-home-btn';
+        a.href = '/home';
+        a.textContent = 'Back to home page';
 
-        var wrapper = document.createElement('div');
-        wrapper.className = wrapperClass;
+        a.style.position = 'fixed';
+        a.style.top = '12px';
+        a.style.right = '14px';
+        a.style.zIndex = '2147483640';
+        a.style.padding = '7px 14px';
+        a.style.fontSize = '13px';
+        a.style.fontWeight = '600';
+        a.style.fontFamily = 'inherit';
+        a.style.textDecoration = 'none';
+        a.style.borderRadius = '6px';
+        a.style.lineHeight = '1';
+        a.style.border = '1px solid ' + (dark ? '#3a3d40' : '#c7cbce');
+        a.style.background = dark ? 'rgba(35,37,39,0.92)' : 'rgba(255,255,255,0.94)';
+        a.style.color = dark ? '#e0e0e0' : '#232527';
+        a.style.backdropFilter = 'blur(6px)';
+        a.style.boxShadow = '0 2px 10px rgba(0,0,0,0.15)';
 
-        var p2 = document.createElement('p');
-        p2.className = entryClass;
+        a.addEventListener('mouseenter', function () {
+            a.style.background = dark ? '#2a2c2e' : '#e8eef5';
+            a.style.color = dark ? '#fff' : '#000';
+        });
+        a.addEventListener('mouseleave', function () {
+            a.style.background = dark ? 'rgba(35,37,39,0.92)' : 'rgba(255,255,255,0.94)';
+            a.style.color = dark ? '#e0e0e0' : '#232527';
+        });
 
-        var icon = document.createElement('span');
-        icon.className = 'icon-nav-group';
-
-        var name = document.createElement('span');
-        name.className = nameClass;
-        name.textContent = 'Nexus Panel';
-
-        p2.appendChild(icon);
-        p2.appendChild(document.createTextNode(' '));
-        p2.appendChild(name);
-        wrapper.appendChild(p2);
-        a.appendChild(wrapper);
-
-        var promo = null;
-        var anchors = card.querySelectorAll('a');
-        for (var j = 0; j < anchors.length; j++) {
-            if (!anchors[j].getAttribute('href')) { promo = anchors[j]; break; }
-        }
-        if (promo) card.insertBefore(a, promo);
-        else card.appendChild(a);
+        (document.body || document.documentElement).appendChild(a);
     }
 
     function applyAll() {
-        if (window.NX.settings.get('removeAds')) window.NX.features.removeAds.apply();
-        if (window.NX.settings.get('hideAlert')) window.NX.features.hideAlert.apply();
-        if (window.NX.settings.get('rap')) window.NX.features.rap.apply();
-        if (window.NX.settings.get('inventorySearch')) window.NX.features.inventorySearch.apply();
-        if (window.NX.settings.get('bulkUnfriend')) window.NX.features.bulkUnfriend.apply();
-        if (window.NX.settings.get('trade2020')) window.NX.features.trade2020.apply();
-        if (window.NX.features.offsale) window.NX.features.offsale.apply();
-        if (window.NX.settings.get('explorer')) window.NX.features.explorer.apply();
-        if (window.NX.settings.get('customBackground')) window.NX.features.customBackground.apply();
-        if (window.NX.settings.get('customLogo')) window.NX.features.customLogo.apply();
-        if (window.NX.settings.get('roundedCorners')) window.NX.features.roundedCorners.apply();
-        if (window.NX.settings.get('nexusPanel')) window.NX.features.nexusPanel.apply();
-        if (window.NX.features.announcement) window.NX.features.announcement.apply();
+        var f = window.NX.features;
+        var s = window.NX.settings;
+        if (!f || !s) return;
+
+        if (s.get('removeAds') && f.removeAds) f.removeAds.apply();
+        if (s.get('hideAlert') && f.hideAlert) f.hideAlert.apply();
+        if (s.get('rap') && f.rap) f.rap.apply();
+        if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
+        if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
+        if (s.get('trade2020') && f.trade2020) f.trade2020.apply();
+        if (s.get('explorer') && f.explorer) f.explorer.apply();
+        if (s.get('customBackground') && f.customBackground) f.customBackground.apply();
+        if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
+        if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
+        if (f.announcement) f.announcement.apply();
     }
 
-    setTimeout(function() {
-        refreshRole().then(function() {
-            renameRobuxTab();
-            makeLogoClickable();
-            injectPanelLink();
-            applyAll();
-        });
-    }, 1000);
+    function tick() {
+        injectSidebar();
+        injectHomeButton();
 
-    var observer = new MutationObserver(function() {
-        renameRobuxTab();
-        makeLogoClickable();
-        injectPanelLink();
-        if (window.NX.settings.get('rap')) window.NX.features.rap.apply();
-        if (window.NX.settings.get('bulkUnfriend')) window.NX.features.bulkUnfriend.apply();
-        if (window.NX.features.offsale) window.NX.features.offsale.apply();
-    });
+        var s = window.NX.settings;
+        if (!s) return;
+        if (s.get('rap') && window.NX.features.rap) window.NX.features.rap.apply();
+        if (s.get('bulkUnfriend') && window.NX.features.bulkUnfriend) {
+            window.NX.features.bulkUnfriend.apply();
+        }
+    }
 
-    observer.observe(document.body, {
+    var tries = 0;
+    var burst = setInterval(function () {
+        tick();
+        if (++tries > 40) clearInterval(burst);
+    }, 50);
+
+    setInterval(tick, 500);
+
+    new MutationObserver(tick).observe(document.documentElement, {
         childList: true,
         subtree: true
     });
 
+    function wrapHistory(name) {
+        var orig = history[name];
+        history[name] = function () {
+            var r = orig.apply(this, arguments);
+            setTimeout(tick, 0);
+            setTimeout(tick, 100);
+            setTimeout(tick, 400);
+            return r;
+        };
+    }
+    wrapHistory('pushState');
+    wrapHistory('replaceState');
+    window.addEventListener('popstate', function () { setTimeout(tick, 0); });
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) clearInterval(burst);
+    });
+
+    function boot() {
+        refreshRole().then(function () {
+            applyAll();
+            tick();
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+    setTimeout(boot, 1200);
 })();
