@@ -14,10 +14,7 @@
             s.textContent = [
                 '.alertBg-0-2-1,',
                 '[class*="alertBg-0-2-"]',
-                '{display:none !important;}',
-                '.fakeAlert-0-2-4,',
-                '[class*="fakeAlert-"]',
-                '{height:0 !important;}'
+                '{visibility:hidden !important;}'
             ].join('');
             (document.head || document.documentElement).appendChild(s);
         },
