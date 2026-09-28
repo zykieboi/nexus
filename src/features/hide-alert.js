@@ -4,25 +4,26 @@
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
+    var STYLE_ID = 'nx-hide-alert';
+
     window.NX.features.hideAlert = {
         apply: function() {
-            if (document.getElementById('nx-hide-alert')) return;
+            if (document.getElementById(STYLE_ID)) return;
             var s = document.createElement('style');
-            s.id = 'nx-hide-alert';
-            s.textContent = `
-                .fakeAlert-0-2-41 > *:not(#nx-announce-banner),
-                [class*="fakeAlert-"] > *:not(#nx-announce-banner),
-                .alertBg-0-2-38,
-                [class*="alertBg-"] {
-                    display: none !important;
-                }
-            `;
-            document.head.appendChild(s);
+            s.id = STYLE_ID;
+            s.textContent = [
+                '.alertBg-0-2-1,',
+                '[class*="alertBg-0-2-"]',
+                '{display:none !important;}',
+                '.fakeAlert-0-2-4,',
+                '[class*="fakeAlert-"]',
+                '{height:0 !important;}'
+            ].join('');
+            (document.head || document.documentElement).appendChild(s);
         },
         teardown: function() {
-            var s = document.getElementById('nx-hide-alert');
+            var s = document.getElementById(STYLE_ID);
             if (s) s.remove();
         }
     };
-
 })();
