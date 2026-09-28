@@ -7,6 +7,7 @@
     var API_V2 = 'https://octane.wtf/apisite/assetdelivery/v2/asset/?id=';
     var SIGNATURE = [60, 114, 111, 98, 108, 111, 120, 33];
     var STYLE_ID = 'nx-exp-style';
+    var BTN_ID = 'nx-exp-btn';
     var OVERLAY_ID = 'nx-exp-overlay';
     var PANEL_ID = 'nx-exp-panel';
 
@@ -719,48 +720,42 @@
         return m ? m[1] : null;
     }
 
-    function injectInto(doc, id) {
-        if (!doc || !doc.body) return false;
-
-        var existing = doc.getElementById('nx-exp-btn');
-        if (existing && existing.dataset.assetId === id) return true;
-        if (existing) existing.remove();
-
-        var host = doc.querySelector('#item-context-menu .rbx-menu-item.item-context-menu');
-        if (!host) return false;
-
-        var btn = doc.createElement('a');
-        btn.id = 'nx-exp-btn';
-        btn.dataset.assetId = id;
-        btn.href = '#';
-        btn.title = 'Explorer';
-        btn.className = 'rbx-menu-item item-context-menu';
-
-        var icon = doc.createElement('span');
-        icon.className = 'icon-more';
-        btn.appendChild(icon);
-
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            open(id);
-        });
-
-        host.parentNode.insertBefore(btn, host);
-        return true;
-    }
-
-    function injectButton() {
+    function injectIntoFrame() {
         var id = assetId();
         if (!id) return;
+
         var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
         for (var i = 0; i < frames.length; i++) {
-            try {
-                var d = frames[i].contentDocument;
-                if (d) injectInto(d, id);
-            } catch (e) {}
+            var doc;
+            try { doc = frames[i].contentDocument; } catch (e) { continue; }
+            if (!doc || !doc.body) continue;
+
+            var existing = doc.getElementById(BTN_ID);
+            if (existing && existing.dataset.assetId === id) continue;
+            if (existing) existing.remove();
+
+            var host = doc.querySelector('#item-context-menu .rbx-menu-item.item-context-menu');
+            if (!host) continue;
+
+            var btn = doc.createElement('a');
+            btn.id = BTN_ID;
+            btn.dataset.assetId = id;
+            btn.href = '#';
+            btn.title = 'Explorer';
+            btn.className = 'rbx-menu-item item-context-menu';
+
+            var icon = doc.createElement('span');
+            icon.className = 'icon-more';
+            btn.appendChild(icon);
+
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                open(id);
+            });
+
+            host.parentNode.insertBefore(btn, host);
         }
-        injectInto(document, id);
     }
 
     function node(inst, depth) {
@@ -1023,20 +1018,17 @@
 
     var observer = null;
     var lastHref = location.href;
-    var iframeScanner = null;
+    var scanner = null;
 
     function teardownButton() {
         var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
         for (var i = 0; i < frames.length; i++) {
-            try {
-                var d = frames[i].contentDocument;
-                if (!d) continue;
-                var b = d.getElementById('nx-exp-btn');
-                if (b) b.remove();
-            } catch (e) {}
+            var doc;
+            try { doc = frames[i].contentDocument; } catch (e) { continue; }
+            if (!doc) continue;
+            var b = doc.getElementById(BTN_ID);
+            if (b) b.remove();
         }
-        var local = document.getElementById('nx-exp-btn');
-        if (local) local.remove();
     }
 
     function close() {
@@ -1047,17 +1039,17 @@
     function scanIframes() {
         var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
         for (var i = 0; i < frames.length; i++) {
-            frames[i].addEventListener('load', injectButton);
+            frames[i].addEventListener('load', injectIntoFrame);
         }
     }
 
     window.NX.features.explorer = {
         apply: function() {
             style();
-            injectButton();
+            injectIntoFrame();
             scanIframes();
 
-            if (!iframeScanner) iframeScanner = setInterval(injectButton, 200);
+            if (!scanner) scanner = setInterval(injectIntoFrame, 200);
 
             if (observer) return;
             var target = document.body || document.documentElement;
@@ -1068,7 +1060,7 @@
                     lastHref = location.href;
                     teardownButton();
                 }
-                injectButton();
+                injectIntoFrame();
             });
             observer.observe(target, { childList: true, subtree: true });
         },
@@ -1077,9 +1069,9 @@
                 observer.disconnect();
                 observer = null;
             }
-            if (iframeScanner) {
-                clearInterval(iframeScanner);
-                iframeScanner = null;
+            if (scanner) {
+                clearInterval(scanner);
+                scanner = null;
             }
             teardownButton();
             close();
