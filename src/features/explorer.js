@@ -845,55 +845,62 @@
 }
 
     function injectInto(doc, id) {
-        if (!doc || !doc.body) return false;
-        var existing = doc.getElementById(BTN_ID);
-        if (existing && existing.dataset.assetId === id) return true;
+    if (!doc || !doc.body) return false;
+    var existing = doc.getElementById(BTN_ID);
+    if (existing && existing.dataset.assetId === id) return true;
 
-        var anchor = findAnchorIn(doc);
-        if (!anchor) return false;
+    var anchor = findAnchorIn(doc);
+    if (!anchor) return false;
 
-        styleIn(doc);
-        if (existing) existing.remove();
+    styleIn(doc);
+    if (existing) existing.remove();
 
-        var btn = doc.createElement('div');
-        btn.id = BTN_ID;
-        btn.dataset.assetId = id;
-        btn.title = 'Explorer';
+    var btn = doc.createElement('div');
+    btn.id = BTN_ID;
+    btn.dataset.assetId = id;
+    btn.title = 'Explorer';
+    btn.style.cssText =
+        'display:inline-flex;align-items:center;justify-content:center;' +
+        'width:40px;height:20px;box-sizing:border-box;cursor:pointer;' +
+        'background:linear-gradient(0deg,#e0e0e0 0%,#ffffff 100%);' +
+        'border:1px solid #777;border-bottom:none;padding:0;margin:0 0 -1px 0;' +
+        'user-select:none;vertical-align:middle;float:right;';
 
-        var img = doc.createElement('img');
-        img.src = EXPLORER_ICON_URL;
-        img.onerror = function() {
-            img.remove();
-            btn.textContent = '\u25A6';
-            btn.style.fontSize = '12px';
-        };
-        btn.appendChild(img);
+    var img = doc.createElement('img');
+    img.src = EXPLORER_ICON_URL;
+    img.style.cssText = 'width:12px;height:12px;display:block;image-rendering:pixelated;';
+    img.onerror = function() {
+        img.remove();
+        btn.textContent = '\u25A6';
+        btn.style.fontSize = '12px';
+    };
+    btn.appendChild(img);
 
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            open(id);
-        });
+    btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        open(id);
+    });
 
-        anchor.insertBefore(btn, anchor.firstChild);
-        return true;
-    }
+    anchor.insertBefore(btn, anchor.firstChild);
+    return true;
+}
 
     function injectButton() {
-        var id = assetId();
-        if (!id) return;
+    var id = assetId();
+    if (!id) return;
 
-        style();
-        injectInto(document, id);
+    style();
+    injectInto(document, id);
 
-        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < iframes.length; i++) {
-            try {
-                var d = iframes[i].contentDocument;
-                if (d) injectInto(d, id);
-            } catch (e) {}
-        }
+    var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+    for (var i = 0; i < iframes.length; i++) {
+        try {
+            var d = iframes[i].contentDocument;
+            if (d) injectInto(d, id);
+        } catch (e) {}
     }
+}
 
     function node(inst, depth) {
         var wrap = document.createElement('div');
@@ -1205,7 +1212,7 @@
             loadSprite().then(function() { injectButton(); });
             scanIframes();
             if (!iframeScanner) {
-                iframeScanner = setInterval(injectButton, 800);
+                iframeScanner = setInterval(injectButton, 200);
             }
             if (observer) return;
             observer = new MutationObserver(function() {
