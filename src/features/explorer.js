@@ -6,13 +6,7 @@
 
     var API_V2 = 'https://octane.wtf/apisite/assetdelivery/v2/asset/?id=';
     var SIGNATURE = [60, 114, 111, 98, 108, 111, 120, 33];
-    var SPRITE_URL = 'https://raw.githubusercontent.com/LockpickInteractive/studio-icons/main/ClassImages/2023-11-23%20ClassImages.png';
-    var EXPLORER_ICON_URL = 'https://raw.githubusercontent.com/zykieboi/nexus/main/img/explorer.png';
-    var CELL = 16;
-    var COLS = 96;
-
     var STYLE_ID = 'nx-exp-style';
-    var BTN_ID = 'nx-exp-btn';
     var OVERLAY_ID = 'nx-exp-overlay';
     var PANEL_ID = 'nx-exp-panel';
 
@@ -34,10 +28,6 @@
         Accessory: 32, Shirt: 43, Pants: 44
     };
 
-    function iconIndex(name) {
-        return ICONS[name] !== undefined ? ICONS[name] : ICONS.Folder;
-    }
-
     var T = {
         STRING: 0x01, BOOL: 0x02, INT: 0x03, FLOAT: 0x04, DOUBLE: 0x05,
         UDIM: 0x06, UDIM2: 0x07, RAY: 0x08, FACES: 0x09, AXES: 0x0a,
@@ -49,58 +39,6 @@
         OPTIONAL_CFRAME: 0x1e, UNIQUE_ID: 0x1f, FONT: 0x20,
         SECURITY_CAPABILITIES: 0x21, CONTENT: 0x22
     };
-
-    var sprite = null;
-    var canvas = null;
-    var iconCache = {};
-
-    function loadSprite() {
-        if (sprite) return Promise.resolve(sprite);
-        return new Promise(function(resolve) {
-            GM_xmlhttpRequest({
-                method: 'GET',
-                url: SPRITE_URL,
-                responseType: 'arraybuffer',
-                onload: function(r) {
-                    if (r.status < 200 || r.status >= 300) { resolve(null); return; }
-                    var blob = new Blob([r.response], { type: 'image/png' });
-                    var u = URL.createObjectURL(blob);
-                    var img = new Image();
-                    img.onload = function() {
-                        sprite = img;
-                        canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        canvas.getContext('2d').drawImage(img, 0, 0);
-                        URL.revokeObjectURL(u);
-                        resolve(img);
-                    };
-                    img.onerror = function() { URL.revokeObjectURL(u); resolve(null); };
-                    img.src = u;
-                },
-                onerror: function() { resolve(null); }
-            });
-        });
-    }
-
-    function iconUrl(idx) {
-        if (!canvas) return null;
-        if (idx < 0 || idx >= COLS) return null;
-        if (iconCache[idx] !== undefined) return iconCache[idx];
-        var c = document.createElement('canvas');
-        c.width = CELL;
-        c.height = CELL;
-        var ctx = c.getContext('2d');
-        ctx.drawImage(canvas, idx * CELL, 0, CELL, CELL, 0, 0, CELL, CELL);
-        var u = c.toDataURL('image/png');
-        iconCache[idx] = u;
-        return u;
-    }
-
-    function classIcon(name) {
-        if (!canvas) return null;
-        return iconUrl(iconIndex(name));
-    }
 
     function unf(v) {
         var u = ((v << 31) | (v >>> 1)) >>> 0;
@@ -745,7 +683,6 @@
         '.nx-exp-node{font-size:12px;line-height:1.45}',
         '.nx-exp-row{display:flex;align-items:center;gap:4px;padding:2px 8px;cursor:pointer;white-space:nowrap}',
         '.nx-exp-toggle{width:12px;text-align:center;font-size:9px;flex-shrink:0;opacity:0.7}',
-        '.nx-exp-icon{width:16px;height:16px;flex-shrink:0;image-rendering:pixelated}',
         '.nx-exp-label{flex:1;overflow:hidden;text-overflow:ellipsis}',
         '.nx-exp-class{font-size:10px;margin-left:6px;opacity:0.55}',
         '.nx-exp-props-empty{text-align:center;padding:40px 0;font-size:12px;opacity:0.6}',
@@ -784,15 +721,7 @@
         '#nx-exp-panel.nx-light .nx-exp-prop-head{border-bottom:1px solid #e1e4e8}',
         '#nx-exp-panel.nx-light .nx-exp-prop-name{color:#7a7d80}',
         '#nx-exp-panel.nx-light .nx-exp-prop-val{color:#232527}',
-        '#nx-exp-panel.nx-light .nx-exp-footer{border-top:1px solid #e1e4e8;color:#7a7d80}',
-        '#nx-exp-btn{display:flex;align-items:center;justify-content:center;width:40px;height:20px;',
-        'box-sizing:border-box;cursor:pointer;',
-        'background:linear-gradient(0deg,rgba(224,224,224,1) 0%,rgba(255,255,255,1) 100%);',
-        'border:1px solid #777777;border-bottom:none;padding:0;margin:0 0 -1px 0;user-select:none}',
-        '#nx-exp-btn:hover{background:linear-gradient(0deg,rgba(203,216,255,1) 0%,rgba(255,255,255,1) 100%)}',
-        '#nx-exp-btn img{width:12px;height:12px;display:block;image-rendering:pixelated}',
-        'html.octane-dark #nx-exp-btn{background:linear-gradient(0deg,rgba(60,60,60,1) 0%,rgba(90,90,90,1) 100%);border-color:#4a4a4a}',
-        'html.octane-dark #nx-exp-btn:hover{background:linear-gradient(0deg,rgba(80,90,120,1) 0%,rgba(110,120,150,1) 100%)}'
+        '#nx-exp-panel.nx-light .nx-exp-footer{border-top:1px solid #e1e4e8;color:#7a7d80}'
     ].join('');
 
     function style() {
@@ -803,104 +732,60 @@
         document.head.appendChild(s);
     }
 
-    function styleIn(doc) {
-        if (!doc || doc.getElementById(STYLE_ID)) return;
-        var s = doc.createElement('style');
-        s.id = STYLE_ID;
-        s.textContent = CSS;
-        (doc.head || doc.documentElement).appendChild(s);
-    }
-
     function assetId() {
         var m = location.pathname.match(/^\/catalog\/(\d+)/);
         return m ? m[1] : null;
     }
 
-    function findAnchorIn(doc) {
-    if (!doc) return null;
-
-    var itemName = doc.querySelector('.item-name-container');
-    if (itemName && itemName.parentElement) return itemName.parentElement;
-
-    var title = doc.querySelector('[class*="title-0-2-"]')
-        || doc.querySelector('h1')
-        || doc.querySelector('h2')
-        || doc.querySelector('[class*="title"]');
-    if (!title) return null;
-
-    var col = title.closest('.col-10')
-        || title.closest('[class*="col-"]')
-        || title.parentElement;
-    if (!col) return null;
-
-    var next = col.nextElementSibling
-        || (col.parentElement && col.parentElement.querySelector('[class*="container-0-2-"]'))
-        || col.parentElement;
-    if (!next) return null;
-
-    var gear = next.querySelector('[class*="container-0-2-"]')
-        || next.querySelector('[class*="button"]')
-        || next;
-    return gear || next;
-}
+    function findMenu(doc) {
+        if (!doc) return null;
+        return doc.querySelector('#item-context-menu .rbx-popover-content ul.dropdown-menu')
+            || doc.querySelector('#item-context-menu .dropdown-menu')
+            || doc.querySelector('#item-context-menu ul.dropdown-menu');
+    }
 
     function injectInto(doc, id) {
-    if (!doc || !doc.body) return false;
-    var existing = doc.getElementById(BTN_ID);
-    if (existing && existing.dataset.assetId === id) return true;
+        if (!doc || !doc.body) return false;
 
-    var anchor = findAnchorIn(doc);
-    if (!anchor) return false;
+        var existing = doc.getElementById('nx-exp-item');
+        if (existing && existing.dataset.assetId === id) return true;
+        if (existing) existing.remove();
 
-    styleIn(doc);
-    if (existing) existing.remove();
+        var menu = findMenu(doc);
+        if (!menu) return false;
 
-    var btn = doc.createElement('div');
-    btn.id = BTN_ID;
-    btn.dataset.assetId = id;
-    btn.title = 'Explorer';
-    btn.style.cssText =
-        'display:inline-flex;align-items:center;justify-content:center;' +
-        'width:40px;height:20px;box-sizing:border-box;cursor:pointer;' +
-        'background:linear-gradient(0deg,#e0e0e0 0%,#ffffff 100%);' +
-        'border:1px solid #777;border-bottom:none;padding:0;margin:0 0 -1px 0;' +
-        'user-select:none;vertical-align:middle;float:right;';
+        var li = doc.createElement('li');
+        li.id = 'nx-exp-item';
 
-    var img = doc.createElement('img');
-    img.src = EXPLORER_ICON_URL;
-    img.style.cssText = 'width:12px;height:12px;display:block;image-rendering:pixelated;';
-    img.onerror = function() {
-        img.remove();
-        btn.textContent = '\u25A6';
-        btn.style.fontSize = '12px';
-    };
-    btn.appendChild(img);
+        var a = doc.createElement('a');
+        a.href = '#';
+        a.tabIndex = 0;
+        a.setAttribute('role', 'button');
+        a.dataset.assetId = id;
+        a.textContent = 'Explorer';
 
-    btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        open(id);
-    });
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            open(id);
+        });
 
-    anchor.insertBefore(btn, anchor.firstChild);
-    return true;
-}
+        li.appendChild(a);
+        menu.appendChild(li);
+        return true;
+    }
 
     function injectButton() {
-    var id = assetId();
-    if (!id) return;
-
-    style();
-    injectInto(document, id);
-
-    var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-    for (var i = 0; i < iframes.length; i++) {
-        try {
-            var d = iframes[i].contentDocument;
-            if (d) injectInto(d, id);
-        } catch (e) {}
+        var id = assetId();
+        if (!id) return;
+        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < iframes.length; i++) {
+            try {
+                var d = iframes[i].contentDocument;
+                if (d) injectInto(d, id);
+            } catch (e) {}
+        }
     }
-}
 
     function node(inst, depth) {
         var wrap = document.createElement('div');
@@ -914,12 +799,6 @@
         toggle.className = 'nx-exp-toggle';
         toggle.textContent = (inst.Children && inst.Children.length) ? '\u25B8' : '';
 
-        var ic = document.createElement('img');
-        ic.className = 'nx-exp-icon';
-        var u = classIcon(inst.ClassName);
-        if (u) ic.src = u;
-        else ic.style.display = 'none';
-
         var label = document.createElement('span');
         label.className = 'nx-exp-label';
         label.textContent = (inst.Properties && inst.Properties.Name) || inst.ClassName;
@@ -929,7 +808,6 @@
         cls.textContent = inst.ClassName;
 
         row.appendChild(toggle);
-        row.appendChild(ic);
         row.appendChild(label);
         row.appendChild(cls);
         wrap.appendChild(row);
@@ -1020,13 +898,6 @@
 
         var head = document.createElement('div');
         head.className = 'nx-exp-prop-head';
-
-        var hic = document.createElement('img');
-        hic.className = 'nx-exp-icon';
-        var u = classIcon(inst.ClassName);
-        if (u) hic.src = u;
-        else hic.style.display = 'none';
-        head.appendChild(hic);
 
         var txt = document.createElement('span');
         var name = (inst.Properties && inst.Properties.Name) || inst.ClassName;
@@ -1179,14 +1050,14 @@
     var iframeScanner = null;
 
     function teardownButton() {
-        var b = document.getElementById(BTN_ID);
-        if (b) b.remove();
+        var btn = document.getElementById('nx-exp-item');
+        if (btn) btn.remove();
         var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
         for (var i = 0; i < iframes.length; i++) {
             try {
                 var d = iframes[i].contentDocument;
                 if (!d) continue;
-                var b2 = d.getElementById(BTN_ID);
+                var b2 = d.getElementById('nx-exp-item');
                 if (b2) b2.remove();
             } catch (e) {}
         }
@@ -1200,20 +1071,16 @@
     function scanIframes() {
         var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
         for (var i = 0; i < iframes.length; i++) {
-            iframes[i].addEventListener('load', function() {
-                injectButton();
-            });
+            iframes[i].addEventListener('load', injectButton);
         }
     }
 
     window.NX.features.explorer = {
         apply: function() {
             style();
-            loadSprite().then(function() { injectButton(); });
+            injectButton();
             scanIframes();
-            if (!iframeScanner) {
-                iframeScanner = setInterval(injectButton, 200);
-            }
+            if (!iframeScanner) iframeScanner = setInterval(injectButton, 200);
             if (observer) return;
             observer = new MutationObserver(function() {
                 if (location.href !== lastHref) {
