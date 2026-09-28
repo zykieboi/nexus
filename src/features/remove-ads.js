@@ -18,7 +18,7 @@
                 '[class*="Ad-"],',
                 '[id*="ad-"],',
                 '[id*="ad_"]',
-                '{display:none !important;}'
+                '{visibility:hidden !important;}'
             ].join('');
             (document.head || document.documentElement).appendChild(s);
         },
