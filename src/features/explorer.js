@@ -704,7 +704,17 @@
         '#nx-exp-panel.nx-light .nx-exp-prop-head{border-bottom:1px solid #e1e4e8}',
         '#nx-exp-panel.nx-light .nx-exp-prop-name{color:#7a7d80}',
         '#nx-exp-panel.nx-light .nx-exp-prop-val{color:#232527}',
-        '#nx-exp-panel.nx-light .nx-exp-footer{border-top:1px solid #e1e4e8;color:#7a7d80}'
+        '#nx-exp-panel.nx-light .nx-exp-footer{border-top:1px solid #e1e4e8;color:#7a7d80}',
+        '#nx-exp-float{position:fixed;top:52px;right:14px;z-index:2147483640;',
+        'padding:7px 14px;font-size:13px;font-weight:600;font-family:inherit;',
+        'text-decoration:none;border-radius:6px;line-height:1;cursor:pointer;',
+        'border:1px solid #c7cbce;background:rgba(255,255,255,0.94);color:#232527;',
+        'backdrop-filter:blur(6px);box-shadow:0 2px 10px rgba(0,0,0,0.15);',
+        'transition:background 0.15s,color 0.15s}',
+        '#nx-exp-float:hover{background:#e8eef5;color:#000}',
+        'html.octane-dark #nx-exp-float{border-color:#3a3d40;',
+        'background:rgba(35,37,39,0.92);color:#e0e0e0}',
+        'html.octane-dark #nx-exp-float:hover{background:#2a2c2e;color:#fff}'
     ].join('');
 
     function style() {
@@ -712,7 +722,7 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = CSS;
-        document.head.appendChild(s);
+        (document.head || document.documentElement).appendChild(s);
     }
 
     function assetId() {
@@ -720,42 +730,38 @@
         return m ? m[1] : null;
     }
 
-    function injectIntoFrame() {
+    function injectFloat() {
         var id = assetId();
-        if (!id) return;
+        var existing = document.getElementById(BTN_ID);
 
-        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < frames.length; i++) {
-            var doc;
-            try { doc = frames[i].contentDocument; } catch (e) { continue; }
-            if (!doc || !doc.body) continue;
-
-            var existing = doc.getElementById(BTN_ID);
-            if (existing && existing.dataset.assetId === id) continue;
+        if (!id) {
             if (existing) existing.remove();
-
-            var host = doc.querySelector('#item-context-menu .rbx-menu-item.item-context-menu');
-            if (!host) continue;
-
-            var btn = doc.createElement('a');
-            btn.id = BTN_ID;
-            btn.dataset.assetId = id;
-            btn.href = '#';
-            btn.title = 'Explorer';
-            btn.className = 'rbx-menu-item item-context-menu';
-
-            var icon = doc.createElement('span');
-            icon.className = 'icon-more';
-            btn.appendChild(icon);
-
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                open(id);
-            });
-
-            host.parentNode.insertBefore(btn, host);
+            return;
         }
+
+        if (existing) {
+            if (existing.dataset.assetId !== id) existing.dataset.assetId = id;
+            return;
+        }
+
+        var btn = document.createElement('a');
+        btn.id = BTN_ID;
+        btn.dataset.assetId = id;
+        btn.href = '#';
+        btn.title = 'Explorer';
+        btn.textContent = 'Explorer';
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            open(btn.dataset.assetId);
+        });
+
+        (document.body || document.documentElement).appendChild(btn);
+    }
+
+    function teardownButton() {
+        var b = document.getElementById(BTN_ID);
+        if (b) b.remove();
     }
 
     function node(inst, depth) {
@@ -1016,40 +1022,21 @@
         });
     }
 
-    var observer = null;
-    var lastHref = location.href;
-    var scanner = null;
-
-    function teardownButton() {
-        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < frames.length; i++) {
-            var doc;
-            try { doc = frames[i].contentDocument; } catch (e) { continue; }
-            if (!doc) continue;
-            var b = doc.getElementById(BTN_ID);
-            if (b) b.remove();
-        }
-    }
-
     function close() {
         var o = document.getElementById(OVERLAY_ID);
         if (o) o.remove();
     }
 
-    function scanIframes() {
-        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < frames.length; i++) {
-            frames[i].addEventListener('load', injectIntoFrame);
-        }
-    }
+    var observer = null;
+    var lastHref = location.href;
+    var scanner = null;
 
     window.NX.features.explorer = {
         apply: function() {
             style();
-            injectIntoFrame();
-            scanIframes();
+            injectFloat();
 
-            if (!scanner) scanner = setInterval(injectIntoFrame, 200);
+            if (!scanner) scanner = setInterval(injectFloat, 300);
 
             if (observer) return;
             var target = document.body || document.documentElement;
@@ -1058,9 +1045,8 @@
             observer = new MutationObserver(function() {
                 if (location.href !== lastHref) {
                     lastHref = location.href;
-                    teardownButton();
                 }
-                injectIntoFrame();
+                injectFloat();
             });
             observer.observe(target, { childList: true, subtree: true });
         },
