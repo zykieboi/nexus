@@ -745,35 +745,73 @@
     }
 
     function injectInto(doc, id) {
-        if (!doc || !doc.body) return false;
+    if (!doc || !doc.body) return false;
 
-        var existing = doc.getElementById('nx-exp-item');
-        if (existing && existing.dataset.assetId === id) return true;
-        if (existing) existing.remove();
+    var existing = doc.getElementById('nx-exp-menu');
+    if (existing && existing.dataset.assetId === id) return true;
+    if (existing) existing.remove();
 
-        var menu = findMenu(doc);
-        if (!menu) return false;
+    var nameRow = doc.querySelector('.item-name-container');
+    if (!nameRow) return false;
 
-        var li = doc.createElement('li');
-        li.id = 'nx-exp-item';
+    var menu = doc.createElement('div');
+    menu.id = 'nx-exp-menu';
+    menu.dataset.assetId = id;
+    menu.style.cssText = 'float:right;position:relative;';
+    menu.innerHTML = [
+        '<a class="rbx-menu-item item-context-menu" style="cursor:pointer;">',
+        '<span class="icon-more"></span>',
+        '</a>',
+        '<div class="rbx-popover-content" style="display:none;position:absolute;' +
+            'top:28px;right:0;background:#fff;border:1px solid #c7cbce;' +
+            'border-radius:4px;min-width:140px;z-index:100;' +
+            'box-shadow:0 2px 8px rgba(0,0,0,0.15);">',
+        '<ul class="dropdown-menu" role="menu" style="margin:0;padding:6px 0;list-style:none;">',
+        '<li><a tabindex="0" role="button" id="nx-exp-open" ' +
+            'style="display:block;padding:6px 14px;font-size:13px;' +
+            'color:#232527;text-decoration:none;cursor:pointer;">Explorer</a></li>',
+        '</ul>',
+        '</div>'
+    ].join('');
 
-        var a = doc.createElement('a');
-        a.href = '#';
-        a.tabIndex = 0;
-        a.setAttribute('role', 'button');
-        a.dataset.assetId = id;
-        a.textContent = 'Explorer';
+    var trigger = menu.querySelector('.rbx-menu-item');
+    var popover = menu.querySelector('.rbx-popover-content');
+    var item = menu.querySelector('#nx-exp-open');
 
-        a.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            open(id);
-        });
+    trigger.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        popover.style.display = popover.style.display === 'none' ? 'block' : 'none';
+    });
 
-        li.appendChild(a);
-        menu.appendChild(li);
-        return true;
-    }
+    item.addEventListener('mouseenter', function() {
+        item.style.background = '#e8eef5';
+    });
+    item.addEventListener('mouseleave', function() {
+        item.style.background = 'transparent';
+    });
+
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        popover.style.display = 'none';
+        open(id);
+    });
+
+    doc.addEventListener('click', function closeMenu(e) {
+        if (!doc.body.contains(menu)) {
+            doc.removeEventListener('click', closeMenu);
+            return;
+        }
+        if (!menu.contains(e.target)) popover.style.display = 'none';
+    });
+
+    var h2 = nameRow.querySelector('h2');
+    if (h2) nameRow.insertBefore(menu, h2.nextSibling);
+    else nameRow.appendChild(menu);
+
+    return true;
+}
 
     function injectButton() {
         var id = assetId();
@@ -1050,18 +1088,18 @@
     var iframeScanner = null;
 
     function teardownButton() {
-        var btn = document.getElementById('nx-exp-item');
-        if (btn) btn.remove();
-        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < iframes.length; i++) {
-            try {
-                var d = iframes[i].contentDocument;
-                if (!d) continue;
-                var b2 = d.getElementById('nx-exp-item');
-                if (b2) b2.remove();
-            } catch (e) {}
-        }
+    var menu = document.getElementById('nx-exp-menu');
+    if (menu) menu.remove();
+    var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+    for (var i = 0; i < iframes.length; i++) {
+        try {
+            var d = iframes[i].contentDocument;
+            if (!d) continue;
+            var m = d.getElementById('nx-exp-menu');
+            if (m) m.remove();
+        } catch (e) {}
     }
+}
 
     function close() {
         var o = document.getElementById(OVERLAY_ID);
