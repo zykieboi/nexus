@@ -5,73 +5,63 @@
     window.NX.features = window.NX.features || {};
 
     var URL_KEY = 'nx_logo_url';
-    var HEIGHT_KEY = 'nx_logo_height';
+    var H_KEY = 'nx_logo_height';
     var PX_KEY = 'nx_logo_panel_x';
     var PY_KEY = 'nx_logo_panel_y';
     var PMIN_KEY = 'nx_logo_panel_min';
 
     var PANEL_ID = 'nx-logo-panel';
-    var PANEL_CSS_ID = 'nx-logo-panel-style';
+    var CSS_ID = 'nx-logo-panel-style';
 
     var dimCache = {};
-    var panelHidden = false;
-    var intervals = [];
+    var hidden = false;
+    var timers = [];
 
-    function isDarkTheme() {
+    function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
         catch (e) { return false; }
     }
 
-    function getUrl() {
-        return GM_getValue(URL_KEY, '');
-    }
-
+    function getUrl() { return GM_getValue(URL_KEY, ''); }
     function getHeight() {
-        var v = parseInt(GM_getValue(HEIGHT_KEY, '30'), 10);
+        var v = parseInt(GM_getValue(H_KEY, '30'), 10);
         return isNaN(v) ? 30 : Math.max(12, Math.min(60, v));
     }
-
-    function getPanelX() {
+    function panelX() {
         var v = GM_getValue(PX_KEY, null);
         if (v === null || v === '') return null;
         var n = parseFloat(v);
         return isNaN(n) ? null : n;
     }
-
-    function getPanelY() {
+    function panelY() {
         var v = GM_getValue(PY_KEY, null);
         if (v === null || v === '') return null;
         var n = parseFloat(v);
         return isNaN(n) ? null : n;
     }
+    function minimized() { return GM_getValue(PMIN_KEY, false) === true; }
 
-    function isPanelMinimized() {
-        return GM_getValue(PMIN_KEY, false) === true;
-    }
-
-    function getLogoEls() {
-        var els = [];
+    function logoEls() {
+        var list = [];
         var d = document.querySelector('.imgDesktop-0-2-12, [class*="imgDesktop-0-2-"]');
-        if (d) els.push({ el: d, kind: 'desktop' });
+        if (d) list.push({ el: d, kind: 'desktop' });
         var m = document.querySelector('.imgMobile-0-2-13, [class*="imgMobile-0-2-"]');
-        if (m) els.push({ el: m, kind: 'mobile' });
-        return els;
+        if (m) list.push({ el: m, kind: 'mobile' });
+        return list;
     }
 
-    function loadDim(url, cb) {
-        if (dimCache[url]) { cb(dimCache[url]); return; }
+    function loadDims(u, cb) {
+        if (dimCache[u]) { cb(dimCache[u]); return; }
         var img = new Image();
         img.onload = function() {
-            dimCache[url] = { w: img.naturalWidth, h: img.naturalHeight };
-            cb(dimCache[url]);
+            dimCache[u] = { w: img.naturalWidth, h: img.naturalHeight };
+            cb(dimCache[u]);
         };
-        img.onerror = function() {
-            cb({ w: 118, h: 30 });
-        };
-        img.src = url;
+        img.onerror = function() { cb({ w: 118, h: 30 }); };
+        img.src = u;
     }
 
-    function restoreOne(el) {
+    function restore(el) {
         el.style.backgroundImage = '';
         el.style.backgroundSize = '';
         el.style.backgroundRepeat = '';
@@ -84,13 +74,13 @@
         el.dataset.nxLogoUrl = '';
     }
 
-    function applyToEl(entry, url, dims) {
+    function paint(entry, u, dims) {
         var el = entry.el;
         var h = getHeight();
-        var aspect = dims.w && dims.h ? (dims.w / dims.h) : (entry.kind === 'desktop' ? 118 / 30 : 1);
+        var aspect = dims.w && dims.h ? dims.w / dims.h : (entry.kind === 'desktop' ? 118 / 30 : 1);
         var w = Math.round(h * aspect);
 
-        el.style.backgroundImage = 'url("' + url + '")';
+        el.style.backgroundImage = 'url("' + u + '")';
         el.style.backgroundSize = 'contain';
         el.style.backgroundRepeat = 'no-repeat';
         el.style.backgroundPosition = 'center';
@@ -99,156 +89,159 @@
         el.style.minWidth = w + 'px';
 
         el.dataset.nxCustomLogo = '1';
-        el.dataset.nxLogoUrl = url;
+        el.dataset.nxLogoUrl = u;
     }
 
     function apply() {
-        var url = getUrl();
-        var els = getLogoEls();
+        var u = getUrl();
+        var els = logoEls();
         if (!els.length) return false;
 
         els.forEach(function(entry) {
             var el = entry.el;
-
-            if (!url) {
-                if (el.dataset.nxCustomLogo === '1') restoreOne(el);
+            if (!u) {
+                if (el.dataset.nxCustomLogo === '1') restore(el);
                 return;
             }
-
-            if (el.dataset.nxCustomLogo === '1' && el.dataset.nxLogoUrl === url) {
-                return;
-            }
-
-            loadDim(url, function(dims) {
-                applyToEl(entry, url, dims);
-            });
+            if (el.dataset.nxCustomLogo === '1' && el.dataset.nxLogoUrl === u) return;
+            loadDims(u, function(dims) { paint(entry, u, dims); });
         });
         return true;
     }
 
-    function ensurePanelStyle() {
-        var old = document.getElementById(PANEL_CSS_ID);
+    function panelStyle() {
+        var old = document.getElementById(CSS_ID);
         if (old) old.remove();
-
-        var dark = isDarkTheme();
-        var bg = dark ? 'rgba(35,37,39,0.95)' : 'rgba(255,255,255,0.96)';
-        var border = dark ? '#3a3d40' : '#c7cbce';
-        var text = dark ? '#e0e0e0' : '#232527';
-        var muted = dark ? '#7a7d80' : '#6a6d70';
-        var inputBg = dark ? '#1a1c1e' : '#ffffff';
-        var hoverBg = dark ? '#2a2c2e' : '#e8eef5';
-
+        var d = dark();
+        var bg = d ? 'rgba(35,37,39,0.95)' : 'rgba(255,255,255,0.96)';
+        var border = d ? '#3a3d40' : '#c7cbce';
+        var text = d ? '#e0e0e0' : '#232527';
+        var muted = d ? '#7a7d80' : '#6a6d70';
+        var inputBg = d ? '#1a1c1e' : '#ffffff';
+        var hoverBg = d ? '#2a2c2e' : '#e8eef5';
         var s = document.createElement('style');
-        s.id = PANEL_CSS_ID;
+        s.id = CSS_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:8px;padding:10px;width:260px;font-family:"Source Sans Pro","Segoe UI",sans-serif;font-size:12px;box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);user-select:none;}',
-            '#' + PANEL_ID + ' .nxlogo-head{display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:13px;margin-bottom:8px;cursor:grab;padding:2px 0;}',
+            '#' + PANEL_ID + '{position:fixed;z-index:2147483646;background:' + bg + ';',
+            'color:' + text + ';border:1px solid ' + border + ';border-radius:8px;',
+            'padding:10px;width:260px;font-family:inherit;font-size:12px;',
+            'box-shadow:0 6px 24px rgba(0,0,0,0.35);backdrop-filter:blur(6px);user-select:none;}',
+            '#' + PANEL_ID + ' .nxlogo-head{display:flex;align-items:center;',
+            'justify-content:space-between;font-weight:600;font-size:13px;',
+            'margin-bottom:8px;cursor:grab;padding:2px 0;}',
             '#' + PANEL_ID + ' .nxlogo-head:active{cursor:grabbing;}',
             '#' + PANEL_ID + ' .nxlogo-head-title{flex:1;}',
-            '#' + PANEL_ID + ' .nxlogo-head-actions{display:flex;gap:2px;align-items:center;}',
-            '#' + PANEL_ID + ' .nxlogo-min{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
+            '#' + PANEL_ID + ' .nxlogo-head-actions{display:flex;gap:2px;}',
+            '#' + PANEL_ID + ' .nxlogo-min,#' + PANEL_ID + ' .nxlogo-close{',
+            'background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;',
+            'line-height:1;padding:0 4px;}',
             '#' + PANEL_ID + ' .nxlogo-min:hover{color:' + text + ';}',
-            '#' + PANEL_ID + ' .nxlogo-close{background:none;border:0;color:' + muted + ';cursor:pointer;font-size:16px;line-height:1;padding:0 4px;}',
             '#' + PANEL_ID + ' .nxlogo-close:hover{color:#e5484d;}',
-            '#' + PANEL_ID + ' input[type=text]{width:100%;background:' + inputBg + ';color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 8px;font-family:inherit;font-size:12px;box-sizing:border-box;margin-bottom:8px;}',
+            '#' + PANEL_ID + ' input[type=text]{width:100%;background:' + inputBg + ';',
+            'color:' + text + ';border:1px solid ' + border + ';border-radius:4px;',
+            'padding:6px 8px;font-family:inherit;font-size:12px;box-sizing:border-box;',
+            'margin-bottom:8px;}',
             '#' + PANEL_ID + ' input[type=text]:focus{outline:none;border-color:#0a84ff;}',
             '#' + PANEL_ID + ' label{display:block;color:' + muted + ';font-size:11px;margin:6px 0 2px;}',
             '#' + PANEL_ID + ' input[type=range]{width:100%;}',
             '#' + PANEL_ID + ' .nxlogo-buttons{display:flex;gap:6px;margin-top:8px;}',
-            '#' + PANEL_ID + ' button.nxlogo-apply{flex:1;background:#0a84ff;color:#fff;border:0;border-radius:4px;padding:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}',
+            '#' + PANEL_ID + ' button.nxlogo-apply{flex:1;background:#0a84ff;color:#fff;',
+            'border:0;border-radius:4px;padding:6px;font-size:12px;font-weight:600;',
+            'cursor:pointer;font-family:inherit;}',
             '#' + PANEL_ID + ' button.nxlogo-apply:hover{background:#0a76e0;}',
-            '#' + PANEL_ID + ' button.nxlogo-clear{background:transparent;color:' + text + ';border:1px solid ' + border + ';border-radius:4px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:inherit;}',
+            '#' + PANEL_ID + ' button.nxlogo-clear{background:transparent;color:' + text + ';',
+            'border:1px solid ' + border + ';border-radius:4px;padding:6px 10px;',
+            'font-size:12px;cursor:pointer;font-family:inherit;}',
             '#' + PANEL_ID + ' button.nxlogo-clear:hover{background:' + hoverBg + ';}',
             '#' + PANEL_ID + '.nxlogo-collapsed{padding:6px 10px;}',
             '#' + PANEL_ID + '.nxlogo-collapsed .nxlogo-head{margin-bottom:0;}',
             '#' + PANEL_ID + '.nxlogo-collapsed .nxlogo-body{display:none;}',
-            '#' + PANEL_ID + ' .nxlogo-hint{color:' + muted + ';font-size:10px;margin-top:6px;line-height:1.4;}'
+            '#' + PANEL_ID + ' .nxlogo-hint{color:' + muted + ';font-size:10px;',
+            'margin-top:6px;line-height:1.4;}'
         ].join('');
         document.head.appendChild(s);
     }
 
-    function clampPanelPosition(panel) {
-        var rect = panel.getBoundingClientRect();
-        var maxX = window.innerWidth - rect.width - 4;
-        var maxY = window.innerHeight - rect.height - 4;
-        var newX = Math.max(4, Math.min(maxX, rect.left));
-        var newY = Math.max(4, Math.min(maxY, rect.top));
-        panel.style.left = newX + 'px';
-        panel.style.top = newY + 'px';
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
-        return { x: newX, y: newY };
+    function clampPanel(p) {
+        var r = p.getBoundingClientRect();
+        var nx = Math.max(4, Math.min(window.innerWidth - r.width - 4, r.left));
+        var ny = Math.max(4, Math.min(window.innerHeight - r.height - 4, r.top));
+        p.style.left = nx + 'px';
+        p.style.top = ny + 'px';
+        p.style.right = 'auto';
+        p.style.bottom = 'auto';
+        return { x: nx, y: ny };
     }
 
-    function savePanelPosition(panel) {
-        var rect = panel.getBoundingClientRect();
-        GM_setValue(PX_KEY, Math.round(rect.left));
-        GM_setValue(PY_KEY, Math.round(rect.top));
+    function savePanel(p) {
+        var r = p.getBoundingClientRect();
+        GM_setValue(PX_KEY, Math.round(r.left));
+        GM_setValue(PY_KEY, Math.round(r.top));
     }
 
-    function applyPanelPosition(panel) {
-        var x = getPanelX();
-        var y = getPanelY();
-        if (x === null || y === null) {
-            panel.style.right = '16px';
-            panel.style.bottom = '16px';
-            panel.style.left = 'auto';
-            panel.style.top = 'auto';
+    function placePanel(p) {
+        var x0 = panelX();
+        var y0 = panelY();
+        if (x0 === null || y0 === null) {
+            p.style.right = '16px';
+            p.style.bottom = '16px';
+            p.style.left = 'auto';
+            p.style.top = 'auto';
             return;
         }
-        panel.style.left = x + 'px';
-        panel.style.top = y + 'px';
-        panel.style.right = 'auto';
-        panel.style.bottom = 'auto';
+        p.style.left = x0 + 'px';
+        p.style.top = y0 + 'px';
+        p.style.right = 'auto';
+        p.style.bottom = 'auto';
         requestAnimationFrame(function() {
-            var clamped = clampPanelPosition(panel);
-            if (clamped.x !== x || clamped.y !== y) savePanelPosition(panel);
+            var c = clampPanel(p);
+            if (c.x !== x0 || c.y !== y0) savePanel(p);
         });
     }
 
-    function attachPanelDrag(panel) {
-        var head = panel.querySelector('.nxlogo-head');
+    function dragPanel(p) {
+        var head = p.querySelector('.nxlogo-head');
         if (!head) return;
-        var dragging = false, offsetX = 0, offsetY = 0;
+        var active = false, ox = 0, oy = 0;
 
         head.addEventListener('mousedown', function(e) {
             if (e.button !== 0) return;
             if (e.target.closest('.nxlogo-min')) return;
             if (e.target.closest('.nxlogo-close')) return;
-            dragging = true;
-            var rect = panel.getBoundingClientRect();
-            offsetX = e.clientX - rect.left;
-            offsetY = e.clientY - rect.top;
+            active = true;
+            var r = p.getBoundingClientRect();
+            ox = e.clientX - r.left;
+            oy = e.clientY - r.top;
             e.preventDefault();
         });
 
         document.addEventListener('mousemove', function(e) {
-            if (!dragging) return;
-            panel.style.left = (e.clientX - offsetX) + 'px';
-            panel.style.top = (e.clientY - offsetY) + 'px';
-            panel.style.right = 'auto';
-            panel.style.bottom = 'auto';
+            if (!active) return;
+            p.style.left = (e.clientX - ox) + 'px';
+            p.style.top = (e.clientY - oy) + 'px';
+            p.style.right = 'auto';
+            p.style.bottom = 'auto';
         });
 
         document.addEventListener('mouseup', function() {
-            if (!dragging) return;
-            dragging = false;
-            clampPanelPosition(panel);
-            savePanelPosition(panel);
+            if (!active) return;
+            active = false;
+            clampPanel(p);
+            savePanel(p);
         });
     }
 
     function buildPanel() {
-        if (panelHidden) return;
+        if (hidden) return;
         var old = document.getElementById(PANEL_ID);
         if (old) old.remove();
-        ensurePanelStyle();
+        panelStyle();
 
-        var minimized = isPanelMinimized();
+        var mini = minimized();
 
-        var panel = document.createElement('div');
-        panel.id = PANEL_ID;
-        if (minimized) panel.classList.add('nxlogo-collapsed');
+        var p = document.createElement('div');
+        p.id = PANEL_ID;
+        if (mini) p.classList.add('nxlogo-collapsed');
 
         var head = document.createElement('div');
         head.className = 'nxlogo-head';
@@ -262,38 +255,34 @@
 
         var min = document.createElement('button');
         min.className = 'nxlogo-min';
-        min.textContent = minimized ? '+' : '\u2013';
-        min.title = minimized ? 'Expand' : 'Minimize';
+        min.textContent = mini ? '+' : '\u2013';
+        min.title = mini ? 'Expand' : 'Minimize';
         min.onclick = function(e) {
             e.stopPropagation();
-            var nowMin = !panel.classList.contains('nxlogo-collapsed');
-            panel.classList.toggle('nxlogo-collapsed');
+            var nowMin = !p.classList.contains('nxlogo-collapsed');
+            p.classList.toggle('nxlogo-collapsed');
             min.textContent = nowMin ? '+' : '\u2013';
             min.title = nowMin ? 'Expand' : 'Minimize';
             GM_setValue(PMIN_KEY, nowMin);
-            requestAnimationFrame(function() {
-                clampPanelPosition(panel);
-                savePanelPosition(panel);
-            });
+            requestAnimationFrame(function() { clampPanel(p); savePanel(p); });
         };
 
         var close = document.createElement('button');
         close.className = 'nxlogo-close';
         close.textContent = '\u00d7';
-        close.title = 'Hide panel (toggle the feature off and on to bring it back)';
+        close.title = 'Hide panel';
         close.onclick = function(e) {
             e.stopPropagation();
-            panelHidden = true;
-            var p = document.getElementById(PANEL_ID);
-            if (p) p.remove();
+            hidden = true;
+            var el = document.getElementById(PANEL_ID);
+            if (el) el.remove();
         };
 
         actions.appendChild(min);
         actions.appendChild(close);
-
         head.appendChild(title);
         head.appendChild(actions);
-        panel.appendChild(head);
+        p.appendChild(head);
 
         var body = document.createElement('div');
         body.className = 'nxlogo-body';
@@ -304,28 +293,28 @@
         input.value = getUrl();
         body.appendChild(input);
 
-        var heightLabel = document.createElement('label');
-        heightLabel.textContent = 'Height: ' + getHeight() + 'px';
-        body.appendChild(heightLabel);
+        var hLabel = document.createElement('label');
+        hLabel.textContent = 'Height: ' + getHeight() + 'px';
+        body.appendChild(hLabel);
 
-        var heightInput = document.createElement('input');
-        heightInput.type = 'range';
-        heightInput.min = '12';
-        heightInput.max = '60';
-        heightInput.step = '1';
-        heightInput.value = String(getHeight());
-        heightInput.oninput = function() {
-            heightLabel.textContent = 'Height: ' + this.value + 'px';
+        var hInput = document.createElement('input');
+        hInput.type = 'range';
+        hInput.min = '12';
+        hInput.max = '60';
+        hInput.step = '1';
+        hInput.value = String(getHeight());
+        hInput.oninput = function() {
+            hLabel.textContent = 'Height: ' + this.value + 'px';
         };
-        heightInput.onchange = function() {
-            GM_setValue(HEIGHT_KEY, this.value);
-            getLogoEls().forEach(function(entry) {
+        hInput.onchange = function() {
+            GM_setValue(H_KEY, this.value);
+            logoEls().forEach(function(entry) {
                 entry.el.dataset.nxCustomLogo = '';
                 entry.el.dataset.nxLogoUrl = '';
             });
             apply();
         };
-        body.appendChild(heightInput);
+        body.appendChild(hInput);
 
         var btns = document.createElement('div');
         btns.className = 'nxlogo-buttons';
@@ -334,13 +323,13 @@
         applyBtn.className = 'nxlogo-apply';
         applyBtn.textContent = 'Apply';
         applyBtn.onclick = function() {
-            var url = input.value.trim();
-            if (url && !/^https?:\/\//i.test(url)) {
+            var u = input.value.trim();
+            if (u && !/^https?:\/\//i.test(u)) {
                 alert('URL must start with http:// or https://');
                 return;
             }
-            GM_setValue(URL_KEY, url);
-            getLogoEls().forEach(function(entry) {
+            GM_setValue(URL_KEY, u);
+            logoEls().forEach(function(entry) {
                 entry.el.dataset.nxCustomLogo = '';
                 entry.el.dataset.nxLogoUrl = '';
             });
@@ -353,9 +342,7 @@
         clearBtn.onclick = function() {
             GM_setValue(URL_KEY, '');
             input.value = '';
-            getLogoEls().forEach(function(entry) {
-                restoreOne(entry.el);
-            });
+            logoEls().forEach(function(entry) { restore(entry.el); });
         };
 
         btns.appendChild(applyBtn);
@@ -364,69 +351,65 @@
 
         var hint = document.createElement('div');
         hint.className = 'nxlogo-hint';
-        hint.textContent = 'Drag this panel by its title bar. × hides the panel until you toggle the feature off and on.';
+        hint.textContent = 'Drag this panel by its title bar.';
         body.appendChild(hint);
 
-        panel.appendChild(body);
-        document.body.appendChild(panel);
+        p.appendChild(body);
+        document.body.appendChild(p);
 
-        applyPanelPosition(panel);
-        attachPanelDrag(panel);
+        placePanel(p);
+        dragPanel(p);
 
         window.addEventListener('resize', function() {
             if (!document.getElementById(PANEL_ID)) return;
-            clampPanelPosition(panel);
-            savePanelPosition(panel);
+            clampPanel(p);
+            savePanel(p);
         });
     }
 
-    function stopWatching() {
-        intervals.forEach(function(iv) { clearInterval(iv); });
-        intervals = [];
+    function stopTimers() {
+        timers.forEach(function(t) { clearInterval(t); });
+        timers = [];
     }
 
-    function startWatching() {
-        if (getUrl()) {
-            var tries = 0;
-            var iv = setInterval(function() {
-                tries++;
-                if (getUrl() && apply()) clearInterval(iv);
-                if (tries > 20) clearInterval(iv);
-            }, 500);
-            intervals.push(iv);
+    function startTimers() {
+        if (!getUrl()) return;
 
-            var lastHref = location.href;
-            var iv2 = setInterval(function() {
-                if (location.href !== lastHref) {
-                    lastHref = location.href;
-                    apply();
-                } else if (getUrl()) {
-                    apply();
-                }
-                if (!document.getElementById(PANEL_ID) && !panelHidden) buildPanel();
-            }, 800);
-            intervals.push(iv2);
-        }
+        var tries = 0;
+        var iv = setInterval(function() {
+            tries++;
+            if (apply() || tries > 20) clearInterval(iv);
+        }, 500);
+        timers.push(iv);
+
+        var last = location.href;
+        var iv2 = setInterval(function() {
+            if (location.href !== last) {
+                last = location.href;
+                apply();
+            } else if (getUrl()) {
+                apply();
+            }
+            if (!document.getElementById(PANEL_ID) && !hidden) buildPanel();
+        }, 800);
+        timers.push(iv2);
     }
 
     window.NX.features.customLogo = {
         apply: function() {
-            stopWatching();
-            panelHidden = false;
+            stopTimers();
+            hidden = false;
             apply();
             buildPanel();
-            startWatching();
+            startTimers();
         },
         teardown: function() {
-            stopWatching();
-            getLogoEls().forEach(function(entry) {
-                restoreOne(entry.el);
-            });
+            stopTimers();
+            logoEls().forEach(function(entry) { restore(entry.el); });
             var p = document.getElementById(PANEL_ID);
             if (p) p.remove();
-            var s = document.getElementById(PANEL_CSS_ID);
+            var s = document.getElementById(CSS_ID);
             if (s) s.remove();
         }
     };
-
 })();
