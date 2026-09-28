@@ -817,15 +817,32 @@
     }
 
     function findAnchorIn(doc) {
-        var t = doc.querySelector('[class*="title-0-2-"]');
-        if (!t) return null;
-        var col = t.closest('.col-10');
-        if (!col) return null;
-        var next = col.nextElementSibling;
-        if (!next) return null;
-        var gear = next.querySelector('[class*="container-0-2-"]');
-        return gear || next;
-    }
+    if (!doc) return null;
+
+    var itemName = doc.querySelector('.item-name-container');
+    if (itemName && itemName.parentElement) return itemName.parentElement;
+
+    var title = doc.querySelector('[class*="title-0-2-"]')
+        || doc.querySelector('h1')
+        || doc.querySelector('h2')
+        || doc.querySelector('[class*="title"]');
+    if (!title) return null;
+
+    var col = title.closest('.col-10')
+        || title.closest('[class*="col-"]')
+        || title.parentElement;
+    if (!col) return null;
+
+    var next = col.nextElementSibling
+        || (col.parentElement && col.parentElement.querySelector('[class*="container-0-2-"]'))
+        || col.parentElement;
+    if (!next) return null;
+
+    var gear = next.querySelector('[class*="container-0-2-"]')
+        || next.querySelector('[class*="button"]')
+        || next;
+    return gear || next;
+}
 
     function injectInto(doc, id) {
         if (!doc || !doc.body) return false;
