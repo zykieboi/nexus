@@ -6,28 +6,25 @@
 
     var STYLE_ID = 'nx-rap-style';
 
-    function formatRap(n) {
+    function fmt(n) {
         n = Number(n) || 0;
         if (n < 1000) return String(n);
         if (n < 1000000) {
             var k = n / 1000;
-            var s = k >= 100 ? Math.round(k).toString() : k.toFixed(1).replace(/\.0$/, '');
-            return s + 'K';
+            return (k >= 100 ? Math.round(k) : k.toFixed(1).replace(/\.0$/, '')) + 'K';
         }
         var m = n / 1000000;
-        var s2 = m >= 100 ? Math.round(m).toString() : m.toFixed(2).replace(/\.?0+$/, '');
-        return s2 + 'M';
+        return (m >= 100 ? Math.round(m) : m.toFixed(2).replace(/\.?0+$/, '')) + 'M';
     }
 
-    function ensureStyle() {
+    function style() {
         if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
         s.id = STYLE_ID;
-        s.textContent =
-            '.nx-rap-stat{min-width:0!important;flex-shrink:0}' +
-            '.nx-rap-stat [class*="statValue-"]{white-space:nowrap}' +
-            '.nx-rap-stat ~ .col-6{flex:0 0 auto!important;width:auto!important;padding-left:8px!important;padding-right:8px!important}' +
-            '.nx-rap-stat ~ [class*="offset-lg-2"]{margin-left:120px!important}';
+        s.textContent = [
+            '.nx-rap-stat{min-width:0!important;flex-shrink:0}',
+            '.nx-rap-stat [class*="statValue-"]{white-space:nowrap}'
+        ].join('');
         document.head.appendChild(s);
     }
 
@@ -36,34 +33,27 @@
             if (document.querySelector('.nx-rap-stat')) return;
             if (window.NX._rapLoading) return;
 
-            var pathMatch = window.location.pathname.match(/\/users\/(\d+)\/profile/);
-            if (!pathMatch) return;
-            var userId = pathMatch[1];
+            var m = location.pathname.match(/\/users\/(\d+)\/profile/);
+            if (!m) return;
+            var userId = m[1];
 
-            var statHeaders = document.querySelectorAll('[class*="statHeader-"]');
-            if (!statHeaders.length) {
-                setTimeout(window.NX.features.rap.apply, 500);
-                return;
-            }
+            var headers = document.querySelectorAll('[class*="statHeader-"]');
+            if (!headers.length) return;
 
-            var followingHeader = null;
-            for (var i = 0; i < statHeaders.length; i++) {
-                if (statHeaders[i].textContent.trim() === 'Following') {
-                    followingHeader = statHeaders[i];
+            var following = null;
+            for (var i = 0; i < headers.length; i++) {
+                if (headers[i].textContent.trim() === 'Following') {
+                    following = headers[i];
                     break;
                 }
             }
-            if (!followingHeader) {
-                setTimeout(window.NX.features.rap.apply, 500);
-                return;
-            }
+            if (!following) return;
 
-            var followingStatRow = followingHeader.closest('[class*="statRow-"]');
-            if (!followingStatRow) return;
+            var row = following.closest('[class*="statRow-"]');
+            if (!row) return;
 
-            var followingCol = followingStatRow.closest('[class*="wrapper-"]');
-            if (!followingCol) followingCol = followingStatRow.parentElement;
-            if (!followingCol || !followingCol.parentElement) return;
+            var col = row.closest('[class*="wrapper-"]') || row.parentElement;
+            if (!col || !col.parentElement) return;
 
             window.NX._rapLoading = true;
 
@@ -77,25 +67,25 @@
                     if (!match) return;
 
                     var raw = parseInt(match[1].replace(/,/g, ''), 10);
-                    if (!raw && raw !== 0) return;
+                    if (isNaN(raw)) return;
 
-                    var wrapper = followingCol.cloneNode(true);
-                    wrapper.classList.add('nx-rap-stat');
+                    var wrap = col.cloneNode(true);
+                    wrap.classList.add('nx-rap-stat');
 
-                    var valueEl = wrapper.querySelector('[class*="statValue-"]');
-                    var headerEl = wrapper.querySelector('[class*="statHeader-"]');
+                    var val = wrap.querySelector('[class*="statValue-"]');
+                    var head = wrap.querySelector('[class*="statHeader-"]');
 
-                    if (valueEl) {
-                        valueEl.innerHTML = '';
+                    if (val) {
+                        val.innerHTML = '';
                         var link = document.createElement('a');
                         link.href = '/internal/limiteds?userId=' + userId;
-                        link.textContent = formatRap(raw);
-                        valueEl.appendChild(link);
+                        link.textContent = fmt(raw);
+                        val.appendChild(link);
                     }
-                    if (headerEl) headerEl.textContent = 'RAP';
+                    if (head) head.textContent = 'RAP';
 
-                    ensureStyle();
-                    followingCol.parentElement.insertBefore(wrapper, followingCol.nextSibling);
+                    style();
+                    col.parentElement.insertBefore(wrap, col.nextSibling);
                 })
                 .catch(function() {
                     window.NX._rapLoading = false;
@@ -107,5 +97,4 @@
             window.NX._rapLoading = false;
         }
     };
-
 })();
