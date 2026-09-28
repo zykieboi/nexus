@@ -19,17 +19,22 @@
     ];
 
     var CSS = [
-        '#nx-announce-banner{background:#393b3d;color:#fff;padding:12px 16px;font-size:15px;font-weight:400;line-height:1.4;position:relative;text-align:center;font-family:inherit}',
-        '#nx-maintenance-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:999997;display:flex;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}',
-        '#nx-maintenance-overlay .nx-maint-box{background:#232527;border:1px solid #343638;border-radius:12px;padding:32px 40px;max-width:480px;text-align:center;color:#e0e0e0}',
+        '#nx-announce-banner{background:#393b3d;color:#fff;padding:12px 16px;',
+        'font-size:15px;line-height:1.4;position:relative;text-align:center;',
+        'font-family:inherit}',
+        '#nx-maintenance-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);',
+        'z-index:999997;display:flex;align-items:center;justify-content:center;',
+        'font-family:inherit}',
+        '#nx-maintenance-overlay .nx-maint-box{background:#232527;border:1px solid #343638;',
+        'border-radius:12px;padding:32px 40px;max-width:480px;text-align:center;color:#e0e0e0}',
         '#nx-maintenance-overlay h2{margin:0 0 10px;font-size:22px;font-weight:600;color:#fff}',
         '#nx-maintenance-overlay p{margin:0;font-size:14px;line-height:1.55;color:#9a9da0}'
     ].join('');
 
-    var pollTimer = null;
-    var lastRendered = null;
+    var timer = null;
+    var lastShown = null;
 
-    function ensureStyle() {
+    function style() {
         if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
         s.id = STYLE_ID;
@@ -37,53 +42,52 @@
         document.head.appendChild(s);
     }
 
-    function getMeId() {
+    function meId() {
         if (window.NX && typeof window.NX.getMeId === 'function') {
             return window.NX.getMeId();
         }
         return parseInt(localStorage.getItem('nx_me_id') || '0', 10);
     }
 
-    function getSlot() {
-        return document.querySelector('.fakeAlert-0-2-41')
+    function slot() {
+        return document.querySelector('.fakeAlert-0-2-4')
             || document.querySelector('[class*="fakeAlert-"]');
     }
 
-    function removeBanner() {
+    function clearBanner() {
         var b = document.getElementById(BANNER_ID);
         if (b) b.remove();
-        var slot = getSlot();
-        if (slot) slot.style.height = '';
+        var s = slot();
+        if (s) s.style.height = '';
     }
 
-    function renderAnnouncement(announcement) {
-        if (!announcement || !announcement.text) {
-            removeBanner();
-            lastRendered = null;
+    function showBanner(ann) {
+        if (!ann || !ann.text) {
+            clearBanner();
+            lastShown = null;
             return;
         }
+        if (lastShown === ann.updatedAt) return;
 
-        if (lastRendered === announcement.updatedAt) return;
+        var s = slot();
+        if (!s) return;
 
-        var slot = getSlot();
-        if (!slot) return;
+        clearBanner();
 
-        removeBanner();
+        var b = document.createElement('div');
+        b.id = BANNER_ID;
+        b.textContent = ann.text;
 
-        var banner = document.createElement('div');
-        banner.id = BANNER_ID;
-        banner.textContent = announcement.text;
-
-        slot.style.height = 'auto';
-        slot.appendChild(banner);
-        lastRendered = announcement.updatedAt;
+        s.style.height = 'auto';
+        s.appendChild(b);
+        lastShown = ann.updatedAt;
     }
 
-    function renderMaintenance(config) {
+    function showMaintenance(config) {
         var existing = document.getElementById(MAINT_ID);
         var on = !!(config && config.maintenance);
 
-        if (!on || getMeId() === 59420) {
+        if (!on || meId() === 1043) {
             if (existing) existing.remove();
             return;
         }
@@ -109,14 +113,15 @@
 
     function applyOverrides(config) {
         if (!config || typeof config !== 'object') return;
+        if (!window.NX.settings) return;
 
         FEATURE_KEYS.forEach(function(key) {
             if (config[key] === false) {
-                var wasOn = window.NX.settings.get(key);
-                if (wasOn) {
+                if (window.NX.settings.get(key)) {
                     window.NX.settings.set(key, false);
-                    if (window.NX.features[key] && typeof window.NX.features[key].teardown === 'function') {
-                        try { window.NX.features[key].teardown(); } catch (e) {}
+                    var f = window.NX.features[key];
+                    if (f && typeof f.teardown === 'function') {
+                        try { f.teardown(); } catch (e) {}
                     }
                 }
             }
@@ -128,25 +133,27 @@
         window.NX.server.config().then(function(res) {
             if (!res || res.status !== 200 || !res.data) return;
             applyOverrides(res.data.config);
-            renderAnnouncement(res.data.announcement);
-            renderMaintenance(res.data.config);
+            showBanner(res.data.announcement);
+            showMaintenance(res.data.config);
         }).catch(function() {});
     }
 
     window.NX.features.announcement = {
         apply: function() {
-            ensureStyle();
+            style();
             pull();
-            if (pollTimer) clearInterval(pollTimer);
-            pollTimer = setInterval(pull, POLL_MS);
+            if (timer) clearInterval(timer);
+            timer = setInterval(pull, POLL_MS);
         },
         teardown: function() {
-            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-            removeBanner();
-            lastRendered = null;
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            clearBanner();
+            lastShown = null;
             var m = document.getElementById(MAINT_ID);
             if (m) m.remove();
         }
     };
-
 })();
