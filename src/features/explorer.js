@@ -722,31 +722,31 @@
     function injectInto(doc, id) {
         if (!doc || !doc.body) return false;
 
-        var existing = doc.getElementById('nx-exp-item');
+        var existing = doc.getElementById('nx-exp-btn');
         if (existing && existing.dataset.assetId === id) return true;
         if (existing) existing.remove();
 
-        var menu = doc.querySelector('#item-context-menu .rbx-popover-content ul.dropdown-menu');
-        if (!menu) return false;
+        var host = doc.querySelector('#item-context-menu .rbx-menu-item.item-context-menu');
+        if (!host) return false;
 
-        var li = doc.createElement('li');
-        li.id = 'nx-exp-item';
+        var btn = doc.createElement('a');
+        btn.id = 'nx-exp-btn';
+        btn.dataset.assetId = id;
+        btn.href = '#';
+        btn.title = 'Explorer';
+        btn.className = 'rbx-menu-item item-context-menu';
 
-        var a = doc.createElement('a');
-        a.href = '#';
-        a.tabIndex = 0;
-        a.setAttribute('role', 'button');
-        a.dataset.assetId = id;
-        a.textContent = 'Explorer';
+        var icon = doc.createElement('span');
+        icon.className = 'icon-more';
+        btn.appendChild(icon);
 
-        a.addEventListener('click', function(e) {
+        btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
             open(id);
         });
 
-        li.appendChild(a);
-        menu.appendChild(li);
+        host.parentNode.insertBefore(btn, host);
         return true;
     }
 
@@ -760,6 +760,7 @@
                 if (d) injectInto(d, id);
             } catch (e) {}
         }
+        injectInto(document, id);
     }
 
     function node(inst, depth) {
@@ -1030,10 +1031,12 @@
             try {
                 var d = frames[i].contentDocument;
                 if (!d) continue;
-                var b = d.getElementById('nx-exp-item');
+                var b = d.getElementById('nx-exp-btn');
                 if (b) b.remove();
             } catch (e) {}
         }
+        var local = document.getElementById('nx-exp-btn');
+        if (local) local.remove();
     }
 
     function close() {
