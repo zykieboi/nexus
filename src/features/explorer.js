@@ -1114,32 +1114,39 @@
     }
 
     window.NX.features.explorer = {
-        apply: function() {
-            style();
-            injectButton();
-            scanIframes();
-            if (!iframeScanner) iframeScanner = setInterval(injectButton, 200);
-            if (observer) return;
-            observer = new MutationObserver(function() {
-                if (location.href !== lastHref) {
-                    lastHref = location.href;
-                    teardownButton();
-                }
-                injectButton();
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-        },
-        teardown: function() {
-            if (observer) {
-                observer.disconnect();
-                observer = null;
-            }
-            if (iframeScanner) {
-                clearInterval(iframeScanner);
-                iframeScanner = null;
-            }
-            teardownButton();
-            close();
+    apply: function() {
+        style();
+        injectButton();
+        scanIframes();
+
+        if (!iframeScanner) {
+            iframeScanner = setInterval(injectButton, 200);
         }
-    };
-})();
+
+        if (observer) return;
+
+        var target = document.body || document.documentElement;
+        if (!target) return;
+
+        observer = new MutationObserver(function() {
+            if (location.href !== lastHref) {
+                lastHref = location.href;
+                teardownButton();
+            }
+            injectButton();
+        });
+        observer.observe(target, { childList: true, subtree: true });
+    },
+    teardown: function() {
+        if (observer) {
+            observer.disconnect();
+            observer = null;
+        }
+        if (iframeScanner) {
+            clearInterval(iframeScanner);
+            iframeScanner = null;
+        }
+        teardownButton();
+        close();
+    }
+};
