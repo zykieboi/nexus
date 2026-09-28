@@ -803,13 +803,21 @@
         document.head.appendChild(s);
     }
 
+    function styleIn(doc) {
+        if (!doc || doc.getElementById(STYLE_ID)) return;
+        var s = doc.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        (doc.head || doc.documentElement).appendChild(s);
+    }
+
     function assetId() {
         var m = location.pathname.match(/^\/catalog\/(\d+)/);
         return m ? m[1] : null;
     }
 
-    function anchor() {
-        var t = document.querySelector('[class*="title-0-2-"]');
+    function findAnchorIn(doc) {
+        var t = doc.querySelector('[class*="title-0-2-"]');
         if (!t) return null;
         var col = t.closest('.col-10');
         if (!col) return null;
@@ -819,24 +827,23 @@
         return gear || next;
     }
 
-    function injectButton() {
-        var id = assetId();
-        if (!id) return;
-        var existing = document.getElementById(BTN_ID);
-        if (existing && existing.dataset.assetId === id) return;
+    function injectInto(doc, id) {
+        if (!doc || !doc.body) return false;
+        var existing = doc.getElementById(BTN_ID);
+        if (existing && existing.dataset.assetId === id) return true;
 
-        var a = anchor();
-        if (!a) return;
+        var anchor = findAnchorIn(doc);
+        if (!anchor) return false;
 
-        style();
+        styleIn(doc);
         if (existing) existing.remove();
 
-        var btn = document.createElement('div');
+        var btn = doc.createElement('div');
         btn.id = BTN_ID;
         btn.dataset.assetId = id;
         btn.title = 'Explorer';
 
-        var img = document.createElement('img');
+        var img = doc.createElement('img');
         img.src = EXPLORER_ICON_URL;
         img.onerror = function() {
             img.remove();
@@ -851,7 +858,24 @@
             open(id);
         });
 
-        a.insertBefore(btn, a.firstChild);
+        anchor.insertBefore(btn, anchor.firstChild);
+        return true;
+    }
+
+    function injectButton() {
+        var id = assetId();
+        if (!id) return;
+
+        style();
+        injectInto(document, id);
+
+        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < iframes.length; i++) {
+            try {
+                var d = iframes[i].contentDocument;
+                if (d) injectInto(d, id);
+            } catch (e) {}
+        }
     }
 
     function node(inst, depth) {
@@ -982,7 +1006,7 @@
 
         var txt = document.createElement('span');
         var name = (inst.Properties && inst.Properties.Name) || inst.ClassName;
-        txt.textContent = name + ' — ' + inst.ClassName;
+        txt.textContent = name + ' \u2014 ' + inst.ClassName;
         head.appendChild(txt);
         pane.appendChild(head);
 
@@ -1057,7 +1081,7 @@
 
         var sub = document.createElement('div');
         sub.className = 'nx-exp-sub';
-        sub.textContent = 'Asset #' + id + ' — loading…';
+        sub.textContent = 'Asset #' + id + ' \u2014 loading\u2026';
 
         titleWrap.appendChild(title);
         titleWrap.appendChild(sub);
@@ -1108,7 +1132,7 @@
 
         loadTree(id).then(function(res) {
             if (!res || !res.isValid || !res.root || !res.root.length) {
-                sub.textContent = 'Asset #' + id + ' — failed to load';
+                sub.textContent = 'Asset #' + id + ' \u2014 failed to load';
                 tree.replaceChildren();
                 var err = document.createElement('div');
                 err.className = 'nx-exp-props-empty';
@@ -1116,7 +1140,7 @@
                 tree.appendChild(err);
                 return;
             }
-            sub.textContent = 'Asset #' + id + ' — ' + res.format + ' — ' +
+            sub.textContent = 'Asset #' + id + ' \u2014 ' + res.format + ' \u2014 ' +
                 res.root.length + ' root instance(s)';
             tree.replaceChildren();
             res.root.forEach(function(inst) {
@@ -1128,10 +1152,20 @@
 
     var observer = null;
     var lastHref = location.href;
+    var iframeScanner = null;
 
     function teardownButton() {
         var b = document.getElementById(BTN_ID);
         if (b) b.remove();
+        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < iframes.length; i++) {
+            try {
+                var d = iframes[i].contentDocument;
+                if (!d) continue;
+                var b2 = d.getElementById(BTN_ID);
+                if (b2) b2.remove();
+            } catch (e) {}
+        }
     }
 
     function close() {
@@ -1139,10 +1173,23 @@
         if (o) o.remove();
     }
 
+    function scanIframes() {
+        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < iframes.length; i++) {
+            iframes[i].addEventListener('load', function() {
+                injectButton();
+            });
+        }
+    }
+
     window.NX.features.explorer = {
         apply: function() {
             style();
             loadSprite().then(function() { injectButton(); });
+            scanIframes();
+            if (!iframeScanner) {
+                iframeScanner = setInterval(injectButton, 800);
+            }
             if (observer) return;
             observer = new MutationObserver(function() {
                 if (location.href !== lastHref) {
@@ -1157,6 +1204,10 @@
             if (observer) {
                 observer.disconnect();
                 observer = null;
+            }
+            if (iframeScanner) {
+                clearInterval(iframeScanner);
+                iframeScanner = null;
             }
             teardownButton();
             close();
