@@ -10,24 +10,6 @@
     var OVERLAY_ID = 'nx-exp-overlay';
     var PANEL_ID = 'nx-exp-panel';
 
-    var ICONS = {
-        Workspace: 19, Players: 21, Lighting: 13,
-        ReplicatedStorage: 72, ServerStorage: 74, ServerScriptService: 0,
-        StarterGui: 46, StarterPack: 20, StarterPlayer: 88, SoundService: 31,
-        Part: 1, MeshPart: 73, UnionOperation: 77, SpecialMesh: 8,
-        BlockMesh: 8, CylinderMesh: 8, WedgePart: 1, SpawnLocation: 25,
-        Decal: 7, Texture: 10, SurfaceAppearance: 10,
-        ScreenGui: 47, Frame: 48, TextLabel: 50, TextButton: 51,
-        TextBox: 51, ImageLabel: 49, ImageButton: 52, ScrollingFrame: 48,
-        UIGridLayout: 26, UIListLayout: 26, UIPadding: 26, UICorner: 26,
-        UIStroke: 26, UIGradient: 26,
-        Script: 6, LocalScript: 18, ModuleScript: 71,
-        StringValue: 4, NumberValue: 4, BoolValue: 4, ObjectValue: 4,
-        IntValue: 4, CFrameValue: 4, Vector3Value: 4,
-        Folder: 70, Model: 2, Humanoid: 9, Tool: 17,
-        Accessory: 32, Shirt: 43, Pants: 44
-    };
-
     var T = {
         STRING: 0x01, BOOL: 0x02, INT: 0x03, FLOAT: 0x04, DOUBLE: 0x05,
         UDIM: 0x06, UDIM2: 0x07, RAY: 0x08, FACES: 0x09, AXES: 0x0a,
@@ -737,89 +719,44 @@
         return m ? m[1] : null;
     }
 
-    function findMenu(doc) {
-        if (!doc) return null;
-        return doc.querySelector('#item-context-menu .rbx-popover-content ul.dropdown-menu')
-            || doc.querySelector('#item-context-menu .dropdown-menu')
-            || doc.querySelector('#item-context-menu ul.dropdown-menu');
-    }
-
     function injectInto(doc, id) {
-    if (!doc || !doc.body) return false;
+        if (!doc || !doc.body) return false;
 
-    var existing = doc.getElementById('nx-exp-menu');
-    if (existing && existing.dataset.assetId === id) return true;
-    if (existing) existing.remove();
+        var existing = doc.getElementById('nx-exp-item');
+        if (existing && existing.dataset.assetId === id) return true;
+        if (existing) existing.remove();
 
-    var nameRow = doc.querySelector('.item-name-container');
-    if (!nameRow) return false;
+        var menu = doc.querySelector('#item-context-menu .rbx-popover-content ul.dropdown-menu');
+        if (!menu) return false;
 
-    var menu = doc.createElement('div');
-    menu.id = 'nx-exp-menu';
-    menu.dataset.assetId = id;
-    menu.style.cssText = 'float:right;position:relative;';
-    menu.innerHTML = [
-        '<a class="rbx-menu-item item-context-menu" style="cursor:pointer;">',
-        '<span class="icon-more"></span>',
-        '</a>',
-        '<div class="rbx-popover-content" style="display:none;position:absolute;' +
-            'top:28px;right:0;background:#fff;border:1px solid #c7cbce;' +
-            'border-radius:4px;min-width:140px;z-index:100;' +
-            'box-shadow:0 2px 8px rgba(0,0,0,0.15);">',
-        '<ul class="dropdown-menu" role="menu" style="margin:0;padding:6px 0;list-style:none;">',
-        '<li><a tabindex="0" role="button" id="nx-exp-open" ' +
-            'style="display:block;padding:6px 14px;font-size:13px;' +
-            'color:#232527;text-decoration:none;cursor:pointer;">Explorer</a></li>',
-        '</ul>',
-        '</div>'
-    ].join('');
+        var li = doc.createElement('li');
+        li.id = 'nx-exp-item';
 
-    var trigger = menu.querySelector('.rbx-menu-item');
-    var popover = menu.querySelector('.rbx-popover-content');
-    var item = menu.querySelector('#nx-exp-open');
+        var a = doc.createElement('a');
+        a.href = '#';
+        a.tabIndex = 0;
+        a.setAttribute('role', 'button');
+        a.dataset.assetId = id;
+        a.textContent = 'Explorer';
 
-    trigger.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        popover.style.display = popover.style.display === 'none' ? 'block' : 'none';
-    });
+        a.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            open(id);
+        });
 
-    item.addEventListener('mouseenter', function() {
-        item.style.background = '#e8eef5';
-    });
-    item.addEventListener('mouseleave', function() {
-        item.style.background = 'transparent';
-    });
-
-    item.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        popover.style.display = 'none';
-        open(id);
-    });
-
-    doc.addEventListener('click', function closeMenu(e) {
-        if (!doc.body.contains(menu)) {
-            doc.removeEventListener('click', closeMenu);
-            return;
-        }
-        if (!menu.contains(e.target)) popover.style.display = 'none';
-    });
-
-    var h2 = nameRow.querySelector('h2');
-    if (h2) nameRow.insertBefore(menu, h2.nextSibling);
-    else nameRow.appendChild(menu);
-
-    return true;
-}
+        li.appendChild(a);
+        menu.appendChild(li);
+        return true;
+    }
 
     function injectButton() {
         var id = assetId();
         if (!id) return;
-        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < iframes.length; i++) {
+        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < frames.length; i++) {
             try {
-                var d = iframes[i].contentDocument;
+                var d = frames[i].contentDocument;
                 if (d) injectInto(d, id);
             } catch (e) {}
         }
@@ -1088,18 +1025,16 @@
     var iframeScanner = null;
 
     function teardownButton() {
-    var menu = document.getElementById('nx-exp-menu');
-    if (menu) menu.remove();
-    var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-    for (var i = 0; i < iframes.length; i++) {
-        try {
-            var d = iframes[i].contentDocument;
-            if (!d) continue;
-            var m = d.getElementById('nx-exp-menu');
-            if (m) m.remove();
-        } catch (e) {}
+        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < frames.length; i++) {
+            try {
+                var d = frames[i].contentDocument;
+                if (!d) continue;
+                var b = d.getElementById('nx-exp-item');
+                if (b) b.remove();
+            } catch (e) {}
+        }
     }
-}
 
     function close() {
         var o = document.getElementById(OVERLAY_ID);
@@ -1107,46 +1042,44 @@
     }
 
     function scanIframes() {
-        var iframes = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
-        for (var i = 0; i < iframes.length; i++) {
-            iframes[i].addEventListener('load', injectButton);
+        var frames = document.querySelectorAll('iframe[src*="/theme2020/catalog/"]');
+        for (var i = 0; i < frames.length; i++) {
+            frames[i].addEventListener('load', injectButton);
         }
     }
 
     window.NX.features.explorer = {
-    apply: function() {
-        style();
-        injectButton();
-        scanIframes();
-
-        if (!iframeScanner) {
-            iframeScanner = setInterval(injectButton, 200);
-        }
-
-        if (observer) return;
-
-        var target = document.body || document.documentElement;
-        if (!target) return;
-
-        observer = new MutationObserver(function() {
-            if (location.href !== lastHref) {
-                lastHref = location.href;
-                teardownButton();
-            }
+        apply: function() {
+            style();
             injectButton();
-        });
-        observer.observe(target, { childList: true, subtree: true });
-    },
-    teardown: function() {
-        if (observer) {
-            observer.disconnect();
-            observer = null;
+            scanIframes();
+
+            if (!iframeScanner) iframeScanner = setInterval(injectButton, 200);
+
+            if (observer) return;
+            var target = document.body || document.documentElement;
+            if (!target) return;
+
+            observer = new MutationObserver(function() {
+                if (location.href !== lastHref) {
+                    lastHref = location.href;
+                    teardownButton();
+                }
+                injectButton();
+            });
+            observer.observe(target, { childList: true, subtree: true });
+        },
+        teardown: function() {
+            if (observer) {
+                observer.disconnect();
+                observer = null;
+            }
+            if (iframeScanner) {
+                clearInterval(iframeScanner);
+                iframeScanner = null;
+            }
+            teardownButton();
+            close();
         }
-        if (iframeScanner) {
-            clearInterval(iframeScanner);
-            iframeScanner = null;
-        }
-        teardownButton();
-        close();
-    }
-};
+    };
+})();
