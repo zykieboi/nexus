@@ -2,15 +2,15 @@
 
 <img src="img/banner.png" width="25%">
 
-<p>Extension for <a href="https://www.aisaka.me">Aisaka</a>.</p>
+<p>Extension for <a href="https://www.octane.wtf">Octane</a>.</p>
 
-<p><strong>This project is work in progress and 100% open-source. Any issues found, please report them by clicking <a href="https://github.com/zykieboi/custom-userscripts/issues/new">here</a>!</strong></p>
+<p><strong>This project is work in progress and 100% open-source. Any issues found, please report them by clicking <a href="https://github.com/zykieboi/nexus/issues/new">here</a>!</strong></p>
 
 </div>
 
 <h2>Privacy</h2>
 
-<p>Nexus doesn't grab your tokens like the personal ones you use for Aisaka. Every token is generated in your own browser, stored in Tampermonkey, and only ever sent to the Nexus, the userscript's @connect line blocks every other domain. <strong>The Worker stores your own Aisaka ID, Username and Timestamps, nothing else. No cookies, no .ROBLOSECURITY, no IP, no site data</strong>. Nexus tokens aren't <strong>tied</strong> to Aisaka's login, so nobody can use one to <strong>access</strong> your account.</p>
+<p>Nexus doesn't grab your tokens like the personal ones you use for Octane. Every token is generated in your own browser, stored in Tampermonkey, and only ever sent to the Nexus, the userscript's @connect line blocks every other domain. <strong>The Worker stores your own Aisaka ID, Username and Timestamps, nothing else. No cookies, no .ROBLOSECURITY, no IP, no site data</strong>. Nexus tokens aren't <strong>tied</strong> to Aisaka's login, so nobody can use one to <strong>access</strong> your account.</p>
 
 <h2>Installation</h2>
 
