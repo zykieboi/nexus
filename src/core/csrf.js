@@ -3,7 +3,7 @@
 
     window.NX_CSRF = window.NX_CSRF || GM_getValue('nx_csrf', '') || '';
 
-    function capture(value) {
+    function save(value) {
         if (value && value !== window.NX_CSRF) {
             window.NX_CSRF = value;
             try { GM_setValue('nx_csrf', value); } catch (e) {}
@@ -17,7 +17,7 @@
             p.then(function(res) {
                 try {
                     var t = res && res.headers && res.headers.get('x-csrf-token');
-                    if (t) capture(t);
+                    if (t) save(t);
                 } catch (e) {}
             }).catch(function() {});
         } catch (e) {}
@@ -25,12 +25,12 @@
     };
 
     var origOpen = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function(method, url) {
+    XMLHttpRequest.prototype.open = function() {
         var self = this;
         self.addEventListener('load', function() {
             try {
                 var t = self.getResponseHeader('x-csrf-token');
-                if (t) capture(t);
+                if (t) save(t);
             } catch (e) {}
         });
         return origOpen.apply(this, arguments);
