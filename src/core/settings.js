@@ -3,6 +3,7 @@
 
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
+
     window.NX.settings = {
         get: function(key) {
             var val = GM_getValue('nx_' + key);
@@ -12,5 +13,4 @@
             GM_setValue('nx_' + key, val);
         }
     };
-
 })();
