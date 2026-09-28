@@ -1,4 +1,4 @@
-const DEV_IDS = [59420];
+const DEV_IDS = [1043];
 const ADMIN_RATE_LIMIT = 30;
 const ADMIN_RATE_WINDOW_MS = 60000;
 
@@ -92,7 +92,7 @@ async function sendDiscord(env, entry) {
     const url = env.DISCORD_WEBHOOK_URL;
     if (!url) return;
     const line = '[' + (entry.action || '?') + '] ' + (entry.actor || '?') +
-        (entry.meta ? ' — ' + entry.meta : '');
+        (entry.meta ? ' \u2014 ' + entry.meta : '');
     try {
         await fetch(url, {
             method: 'POST',
@@ -114,20 +114,55 @@ function requireRank(user, minRole) {
     return rankOf(user.role) >= rankOf(minRole);
 }
 
+function publicUser(u) {
+    return {
+        aisakaId: u.aisakaId,
+        username: u.username,
+        role: u.role || (u.isAdmin ? 'admin' : 'user'),
+        isAdmin: rankOf(u.role) >= rankOf('admin'),
+        banned: !!u.banned,
+        banReason: u.banReason || null,
+        banExpiresAt: u.banExpiresAt || null,
+        firstSeen: u.firstSeen,
+        lastSeen: u.lastSeen
+    };
+}
+
+function json(obj, status, cors) {
+    return new Response(JSON.stringify(obj), {
+        status,
+        headers: { 'Content-Type': 'application/json', ...cors }
+    });
+}
+
 export default {
     async fetch(request, env) {
         const url = new URL(request.url);
+        const origin = request.headers.get('Origin') || '';
+        const allowedOrigins = [
+            'https://octane.wtf',
+            'https://www.octane.wtf',
+            'https://aisaka.me',
+            'https://www.aisaka.me'
+        ];
+        const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+
         const cors = {
-            'Access-Control-Allow-Origin': 'https://www.aisaka.me',
+            'Access-Control-Allow-Origin': allowOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, X-Nexus-Token, X-Nexus-Dev-Secret',
-            'Access-Control-Allow-Credentials': 'true'
+            'Access-Control-Allow-Credentials': 'true',
+            'Vary': 'Origin'
         };
 
-        if (request.method === 'OPTIONS') return new Response(null, { headers: cors });
+        if (request.method === 'OPTIONS') {
+            return new Response(null, { headers: cors });
+        }
 
         const token = request.headers.get('x-nexus-token');
-        if (!token || token.length < 32) return json({ error: 'missing token' }, 401, cors);
+        if (!token || token.length < 32) {
+            return json({ error: 'missing token' }, 401, cors);
+        }
 
         const key = 'user:' + token;
         let user = await env.NEXUS_KV.get(key, 'json');
@@ -151,12 +186,17 @@ export default {
                         ts: Date.now(),
                         actor: 'system',
                         action: 'user.role.pending-applied',
-                        meta: (user.username || String(user.aisakaId)) + ' → ' + user.role
+                        meta: (user.username || String(user.aisakaId)) + ' \u2192 ' + user.role
                     });
                 }
                 user = await applyExpiry(env, key, user);
                 await env.NEXUS_KV.put(key, JSON.stringify(user));
-                return json({ ok: true, alreadyClaimed: true, role: user.role, isAdmin: user.isAdmin }, 200, cors);
+                return json({
+                    ok: true,
+                    alreadyClaimed: true,
+                    role: user.role,
+                    isAdmin: user.isAdmin
+                }, 200, cors);
             }
 
             let role = roleFor(aisakaId, null);
@@ -234,7 +274,9 @@ export default {
             }
 
             if (url.pathname === '/admin/users' && request.method === 'GET') {
-                if (!requireRank(user, 'moderator')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'moderator')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 const users = [];
@@ -244,7 +286,7 @@ export default {
                     u = migrate(u);
                     u = await applyExpiry(env, k.name, u);
                     users.push(Object.assign(publicUser(u), {
-                        tokenPreview: k.name.slice(6, 20) + '…'
+                        tokenPreview: k.name.slice(6, 20) + '\u2026'
                     }));
                 }
                 users.sort((a, b) => b.lastSeen - a.lastSeen);
@@ -263,10 +305,16 @@ export default {
             }
 
             if (url.pathname === '/admin/tokens' && request.method === 'GET') {
-                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
                 const secretErr = checkDevSecret(request, env);
-                if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
-                if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
+                if (secretErr === 'unconfigured') {
+                    return json({ error: 'dev secret not configured' }, 500, cors);
+                }
+                if (secretErr === 'forbidden') {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 const tokens = [];
@@ -285,22 +333,30 @@ export default {
             }
 
             if (url.pathname === '/admin/role' && request.method === 'POST') {
-                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
                 const secretErr = checkDevSecret(request, env);
-                if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
-                if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
+                if (secretErr === 'unconfigured') {
+                    return json({ error: 'dev secret not configured' }, 500, cors);
+                }
+                if (secretErr === 'forbidden') {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
                 const nextRole = String(body.role || '');
                 if (!preview) return json({ error: 'no preview' }, 400, cors);
-                if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
+                if (!(nextRole in ROLE_RANK)) {
+                    return json({ error: 'invalid role' }, 400, cors);
+                }
 
                 const list = await env.NEXUS_KV.list({ prefix: 'user:' });
                 for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
-                    if (k.name.slice(6, 20) + '…' === preview) {
+                    if (k.name.slice(6, 20) + '\u2026' === preview) {
                         u = migrate(u);
                         if (DEV_IDS.includes(u.aisakaId)) {
                             return json({ error: 'cannot change dev via panel' }, 400, cors);
@@ -312,7 +368,7 @@ export default {
                             ts: Date.now(),
                             actor: actorOf(user),
                             action: 'user.role',
-                            meta: (u.username || String(u.aisakaId)) + ' → ' + nextRole
+                            meta: (u.username || String(u.aisakaId)) + ' \u2192 ' + nextRole
                         });
                         return json({ ok: true, role: nextRole }, 200, cors);
                     }
@@ -321,16 +377,24 @@ export default {
             }
 
             if (url.pathname === '/admin/role-by-id' && request.method === 'POST') {
-                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
                 const secretErr = checkDevSecret(request, env);
-                if (secretErr === 'unconfigured') return json({ error: 'dev secret not configured' }, 500, cors);
-                if (secretErr === 'forbidden') return json({ error: 'forbidden' }, 403, cors);
+                if (secretErr === 'unconfigured') {
+                    return json({ error: 'dev secret not configured' }, 500, cors);
+                }
+                if (secretErr === 'forbidden') {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const aisakaId = parseInt(body.aisakaId, 10);
                 const nextRole = String(body.role || '');
                 if (!aisakaId) return json({ error: 'invalid id' }, 400, cors);
-                if (!(nextRole in ROLE_RANK)) return json({ error: 'invalid role' }, 400, cors);
+                if (!(nextRole in ROLE_RANK)) {
+                    return json({ error: 'invalid role' }, 400, cors);
+                }
                 if (DEV_IDS.includes(aisakaId)) {
                     return json({ error: 'cannot change dev via panel' }, 400, cors);
                 }
@@ -355,7 +419,8 @@ export default {
                         ts: Date.now(),
                         actor: actorOf(user),
                         action: 'user.role',
-                        meta: (updated.username || String(updated.aisakaId)) + ' → ' + nextRole
+                        meta: (updated.username || String(updated.aisakaId)) +
+                            ' \u2192 ' + nextRole
                     });
                     return json({ ok: true, applied: true, role: nextRole }, 200, cors);
                 }
@@ -369,13 +434,15 @@ export default {
                     ts: Date.now(),
                     actor: actorOf(user),
                     action: 'user.role.pending',
-                    meta: '#' + aisakaId + ' → ' + nextRole + ' (not claimed yet)'
+                    meta: '#' + aisakaId + ' \u2192 ' + nextRole + ' (not claimed yet)'
                 });
                 return json({ ok: true, applied: false, role: nextRole }, 200, cors);
             }
 
             if (url.pathname === '/admin/announce' && request.method === 'POST') {
-                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const text = String(body.text || '').slice(0, 500);
@@ -397,7 +464,9 @@ export default {
             }
 
             if (url.pathname === '/admin/ban' && request.method === 'POST') {
-                if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'admin')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
@@ -410,7 +479,7 @@ export default {
                 for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
-                    if (k.name.slice(6, 20) + '…' === preview) {
+                    if (k.name.slice(6, 20) + '\u2026' === preview) {
                         u = migrate(u);
                         if (rankOf(u.role) >= rankOf('admin') && !requireRank(user, 'dev')) {
                             return json({ error: 'cannot ban admin' }, 403, cors);
@@ -428,7 +497,8 @@ export default {
                             ts: Date.now(),
                             actor: actorOf(user),
                             action: 'user.ban',
-                            meta: (u.username || String(u.aisakaId)) + (reason ? ' — ' + reason : '')
+                            meta: (u.username || String(u.aisakaId)) +
+                                (reason ? ' \u2014 ' + reason : '')
                         });
                         return json({ ok: true, banned: true }, 200, cors);
                     }
@@ -437,7 +507,9 @@ export default {
             }
 
             if (url.pathname === '/admin/unban' && request.method === 'POST') {
-                if (!requireRank(user, 'admin')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'admin')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const preview = String(body.tokenPreview || '');
@@ -447,7 +519,7 @@ export default {
                 for (const k of list.keys) {
                     let u = await env.NEXUS_KV.get(k.name, 'json');
                     if (!u) continue;
-                    if (k.name.slice(6, 20) + '…' === preview) {
+                    if (k.name.slice(6, 20) + '\u2026' === preview) {
                         u = migrate(u);
                         u.banned = false;
                         delete u.banReason;
@@ -466,7 +538,9 @@ export default {
             }
 
             if (url.pathname === '/admin/config' && request.method === 'POST') {
-                if (!requireRank(user, 'dev')) return json({ error: 'forbidden' }, 403, cors);
+                if (!requireRank(user, 'dev')) {
+                    return json({ error: 'forbidden' }, 403, cors);
+                }
 
                 const body = await request.json();
                 const current = (await env.NEXUS_KV.get('config', 'json')) || {};
@@ -485,24 +559,3 @@ export default {
         return json({ error: 'not found' }, 404, cors);
     }
 };
-
-function publicUser(u) {
-    return {
-        aisakaId: u.aisakaId,
-        username: u.username,
-        role: u.role || (u.isAdmin ? 'admin' : 'user'),
-        isAdmin: rankOf(u.role) >= rankOf('admin'),
-        banned: !!u.banned,
-        banReason: u.banReason || null,
-        banExpiresAt: u.banExpiresAt || null,
-        firstSeen: u.firstSeen,
-        lastSeen: u.lastSeen
-    };
-}
-
-function json(obj, status, cors) {
-    return new Response(JSON.stringify(obj), {
-        status,
-        headers: { 'Content-Type': 'application/json', ...cors }
-    });
-}
