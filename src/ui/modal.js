@@ -196,10 +196,6 @@
                 cat: 'function', label: 'RAP on Profile',
                 desc: 'Shows total RAP next to profile stats.'
             },
-            trade2020: {
-                cat: 'function', label: '2020 Trade Theme',
-                desc: 'Replaces the trade list with the 2020 layout.'
-            },
             explorer: {
                 cat: 'function', label: 'Explorer',
                 desc: 'View the instance tree of any catalog asset.'
