@@ -10,7 +10,9 @@
         if (t && t.length >= 32) return t;
         var arr = new Uint8Array(32);
         (window.crypto || window.msCrypto).getRandomValues(arr);
-        t = Array.from(arr).map(function(b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+        t = Array.from(arr).map(function(b) {
+            return ('0' + b.toString(16)).slice(-2);
+        }).join('');
         GM_setValue('nx_token', t);
         return t;
     }
@@ -38,7 +40,9 @@
                     catch (e) { data = { raw: res.responseText }; }
                     resolve({ status: res.status, data: data });
                 },
-                onerror: function() { reject(new Error('network error')); }
+                onerror: function() {
+                    reject(new Error('network error'));
+                }
             });
         });
     }
@@ -50,10 +54,18 @@
         claim: function(aisakaId, username) {
             return request('POST', '/claim', { aisakaId: aisakaId, username: username });
         },
-        me: function() { return request('GET', '/me'); },
-        config: function() { return request('GET', '/config'); },
-        adminUsers: function() { return request('GET', '/admin/users'); },
-        adminTokens: function() { return request('GET', '/admin/tokens'); },
+        me: function() {
+            return request('GET', '/me');
+        },
+        config: function() {
+            return request('GET', '/config');
+        },
+        adminUsers: function() {
+            return request('GET', '/admin/users');
+        },
+        adminTokens: function() {
+            return request('GET', '/admin/tokens');
+        },
         adminRole: function(tokenPreview, role) {
             return request('POST', '/admin/role', { tokenPreview: tokenPreview, role: role });
         },
@@ -64,12 +76,17 @@
             return request('POST', '/admin/announce', { text: text, test: !!isTest });
         },
         adminBan: function(tokenPreview, opts) {
-            return request('POST', '/admin/ban', Object.assign({ tokenPreview: tokenPreview }, opts || {}));
+            return request('POST', '/admin/ban',
+                Object.assign({ tokenPreview: tokenPreview }, opts || {}));
         },
         adminUnban: function(tokenPreview) {
             return request('POST', '/admin/unban', { tokenPreview: tokenPreview });
         },
-        adminLogs: function() { return request('GET', '/admin/logs'); },
-        adminConfig: function(patch) { return request('POST', '/admin/config', patch || {}); }
+        adminLogs: function() {
+            return request('GET', '/admin/logs');
+        },
+        adminConfig: function(patch) {
+            return request('POST', '/admin/config', patch || {});
+        }
     };
 })();
