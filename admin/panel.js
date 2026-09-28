@@ -17,7 +17,6 @@
         { key: 'rap', label: 'RAP on Profile', desc: 'Shows the user\'s total RAP next to their friends/followers stats.' },
         { key: 'inventorySearch', label: 'Inventory Search', desc: 'Adds a search bar to your inventory so you can filter items by name.' },
         { key: 'bulkUnfriend', label: 'Bulk Unfriend', desc: 'Select multiple friends and remove them all at once from the friends page.' },
-        { key: 'trade2020', label: '2020 Trade Theme', desc: 'Replaces the default trade list and window with the 2020 Roblox layout.' },
         { key: 'explorer', label: 'Explorer', desc: 'View the instance tree of any catalog asset.' },
         { key: 'customBackground', label: 'Custom Background', desc: 'Replaces the site background with an image chosen by the user.' },
         { key: 'customLogo', label: 'Custom Logo', desc: 'Replaces the navbar logo with an image chosen by the user.' }
@@ -393,7 +392,7 @@
             class: 'nxp-btn',
             onclick: function() { reloadAll(); }
         }, '\u21bb Reload'));
-        actions.appendChild(el('a', { class: 'nxp-back', href: '/home' }, '\u2190 Back to site'));
+        actions.appendChild(el('a', { class: 'nxp-back', href: '/home' }, '\u2190 Back to home page'));
         head.appendChild(actions);
         shell.appendChild(head);
 
