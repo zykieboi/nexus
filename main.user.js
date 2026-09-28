@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.6.0
+// @version      1.0.6.1
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -24,7 +24,6 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/trade-2020.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js
@@ -45,16 +44,14 @@
     window.NX.role = null;
 
     var ADMIN_HASH = '#nexus-admin';
-    var hosts = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
+    var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
 
-    hosts.forEach(function (host) {
+    HOSTS.forEach(function (host) {
         GM_xmlhttpRequest({
             method: 'HEAD',
             url: 'https://' + host + '/',
             timeout: 4000,
-            onerror: function () {
-                GM_setValue('nx_host_fail', host);
-            }
+            onerror: function () { GM_setValue('nx_host_fail', host); }
         });
     });
 
@@ -109,7 +106,6 @@
             return window.NX.role;
         }).catch(function () { return null; });
     }
-
     window.NX.refreshRole = refreshRole;
 
     function sidebarList() {
@@ -189,46 +185,6 @@
         }
     }
 
-    function injectHomeButton() {
-        if (document.getElementById('nx-home-btn')) return;
-
-        var dark = false;
-        try { dark = localStorage.getItem('rbx_theme_v1') === 'dark'; } catch (e) {}
-
-        var a = document.createElement('a');
-        a.id = 'nx-home-btn';
-        a.href = '/home';
-        a.textContent = 'Back to home page';
-
-        a.style.position = 'fixed';
-        a.style.top = '12px';
-        a.style.right = '14px';
-        a.style.zIndex = '2147483640';
-        a.style.padding = '7px 14px';
-        a.style.fontSize = '13px';
-        a.style.fontWeight = '600';
-        a.style.fontFamily = 'inherit';
-        a.style.textDecoration = 'none';
-        a.style.borderRadius = '6px';
-        a.style.lineHeight = '1';
-        a.style.border = '1px solid ' + (dark ? '#3a3d40' : '#c7cbce');
-        a.style.background = dark ? 'rgba(35,37,39,0.92)' : 'rgba(255,255,255,0.94)';
-        a.style.color = dark ? '#e0e0e0' : '#232527';
-        a.style.backdropFilter = 'blur(6px)';
-        a.style.boxShadow = '0 2px 10px rgba(0,0,0,0.15)';
-
-        a.addEventListener('mouseenter', function () {
-            a.style.background = dark ? '#2a2c2e' : '#e8eef5';
-            a.style.color = dark ? '#fff' : '#000';
-        });
-        a.addEventListener('mouseleave', function () {
-            a.style.background = dark ? 'rgba(35,37,39,0.92)' : 'rgba(255,255,255,0.94)';
-            a.style.color = dark ? '#e0e0e0' : '#232527';
-        });
-
-        (document.body || document.documentElement).appendChild(a);
-    }
-
     function applyAll() {
         var f = window.NX.features;
         var s = window.NX.settings;
@@ -239,7 +195,6 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
-        if (s.get('trade2020') && f.trade2020) f.trade2020.apply();
         if (s.get('explorer') && f.explorer) f.explorer.apply();
         if (s.get('customBackground') && f.customBackground) f.customBackground.apply();
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
@@ -249,14 +204,17 @@
 
     function tick() {
         injectSidebar();
-        injectHomeButton();
 
+        var f = window.NX.features;
         var s = window.NX.settings;
-        if (!s) return;
-        if (s.get('rap') && window.NX.features.rap) window.NX.features.rap.apply();
-        if (s.get('bulkUnfriend') && window.NX.features.bulkUnfriend) {
-            window.NX.features.bulkUnfriend.apply();
-        }
+        if (!f || !s) return;
+
+        if (s.get('removeAds') && f.removeAds) f.removeAds.apply();
+        if (s.get('hideAlert') && f.hideAlert) f.hideAlert.apply();
+        if (s.get('rap') && f.rap) f.rap.apply();
+        if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
+        if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
+        if (s.get('explorer') && f.explorer) f.explorer.apply();
     }
 
     var tries = 0;
