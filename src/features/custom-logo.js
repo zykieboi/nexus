@@ -52,6 +52,10 @@
         return list;
     }
 
+    function removeAllPanels() {
+        document.querySelectorAll('#' + PANEL_ID).forEach(function (el) { el.remove(); });
+    }
+
     function loadDims(u, cb) {
         if (dimCache[u]) { cb(dimCache[u]); return; }
         var img = new Image();
@@ -94,7 +98,9 @@
         el.dataset.nxLogoUrl = u;
     }
 
-    function apply() {
+    // Renamed from the old shadowed `apply()` so it's obvious this is the
+    // "paint the logos" routine, not the feature's public entry point.
+    function paintLogos() {
         var u = getUrl();
         var els = logoEls();
         if (!els.length) return false;
@@ -235,8 +241,8 @@
 
     function buildPanel() {
         if (hidden) return;
-        var old = document.getElementById(PANEL_ID);
-        if (old) old.remove();
+        // purge ALL panels with this id (in case of orphans from a previous build)
+        removeAllPanels();
         panelStyle();
 
         var mini = minimized();
@@ -276,8 +282,7 @@
         close.onclick = function(e) {
             e.stopPropagation();
             hidden = true;
-            var el = document.getElementById(PANEL_ID);
-            if (el) el.remove();
+            removeAllPanels();
         };
 
         actions.appendChild(min);
@@ -314,7 +319,7 @@
                 entry.el.dataset.nxCustomLogo = '';
                 entry.el.dataset.nxLogoUrl = '';
             });
-            apply();
+            paintLogos();
         };
         body.appendChild(hInput);
 
@@ -335,7 +340,7 @@
                 entry.el.dataset.nxCustomLogo = '';
                 entry.el.dataset.nxLogoUrl = '';
             });
-            apply();
+            paintLogos();
         };
 
         var clearBtn = document.createElement('button');
@@ -380,7 +385,7 @@
         var tries = 0;
         var iv = setInterval(function() {
             tries++;
-            if (apply() || tries > 20) clearInterval(iv);
+            if (paintLogos() || tries > 20) clearInterval(iv);
         }, 500);
         timers.push(iv);
 
@@ -388,9 +393,9 @@
         var iv2 = setInterval(function() {
             if (location.href !== last) {
                 last = location.href;
-                apply();
+                paintLogos();
             } else if (getUrl()) {
-                apply();
+                paintLogos();
             }
             if (!document.getElementById(PANEL_ID) && !hidden) buildPanel();
         }, 800);
@@ -401,15 +406,14 @@
         apply: function() {
             stopTimers();
             hidden = false;
-            apply();
-            buildPanel();
+            paintLogos();
+            if (!document.getElementById(PANEL_ID)) buildPanel();
             startTimers();
         },
         teardown: function() {
             stopTimers();
             logoEls().forEach(function(entry) { restore(entry.el); });
-            var p = document.getElementById(PANEL_ID);
-            if (p) p.remove();
+            removeAllPanels();
             var s = document.getElementById(CSS_ID);
             if (s) s.remove();
         }
