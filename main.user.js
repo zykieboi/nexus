@@ -24,7 +24,7 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=4
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=4
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=4
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js?v=3
