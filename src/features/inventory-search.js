@@ -62,8 +62,6 @@
         var container = findContainer();
         if (!container) return;
 
-        style();
-
         var wrap = document.createElement('div');
         wrap.id = WRAP_ID;
 
@@ -84,10 +82,13 @@
         apply: function() {
             style();
             build();
+
             if (!scanner) {
                 scanner = setInterval(function() {
-                    if (!document.getElementById(WRAP_ID)) build();
-                }, 800);
+                    if (document.getElementById(WRAP_ID)) return;
+                    style();
+                    build();
+                }, 1500);
             }
         },
         teardown: function() {
