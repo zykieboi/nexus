@@ -87,6 +87,10 @@
         return el;
     }
 
+    function removeAllPanels() {
+        document.querySelectorAll('#' + PANEL_ID).forEach(function (el) { el.remove(); });
+    }
+
     function hexRgb(hex) {
         var h = (hex || '#000000').replace('#', '');
         if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
@@ -307,8 +311,8 @@
 
     function buildPanel() {
         if (hidden) return;
-        var old = document.getElementById(PANEL_ID);
-        if (old) old.remove();
+        // purge ALL panels with this id (in case of orphans from a previous build)
+        removeAllPanels();
         panelStyle();
 
         var mini = minimized();
@@ -348,8 +352,7 @@
         close.onclick = function(e) {
             e.stopPropagation();
             hidden = true;
-            var el = document.getElementById(PANEL_ID);
-            if (el) el.remove();
+            removeAllPanels();
         };
 
         actions.appendChild(min);
@@ -554,6 +557,8 @@
         if (l) l.remove();
         var o = document.getElementById('nx-bg-overlay');
         if (o) o.remove();
+        // kill any orphaned panels before rebuilding
+        removeAllPanels();
 
         if (!url()) {
             buildPanel();
@@ -591,9 +596,9 @@
             hidden = false;
             if (url()) {
                 pageTransparent();
-                buildLayer();
+                if (!layer()) buildLayer();
             }
-            buildPanel();
+            if (!document.getElementById(PANEL_ID)) buildPanel();
             startWatch();
         },
         teardown: function() {
@@ -602,8 +607,7 @@
             if (l) l.remove();
             var o = document.getElementById('nx-bg-overlay');
             if (o) o.remove();
-            var p = document.getElementById(PANEL_ID);
-            if (p) p.remove();
+            removeAllPanels();
             var s = document.getElementById(CSS_ID);
             if (s) s.remove();
             removeTransparent();
