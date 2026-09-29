@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.6.1
+// @version      1.0.7.0
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,21 +16,19 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js?v=2
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/gate.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=3
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -41,12 +39,10 @@
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
     window.NX.ui = window.NX.ui || {};
-    window.NX.role = null;
 
-    var ADMIN_HASH = '#nexus-admin';
-    var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
+    var hosts = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
 
-    HOSTS.forEach(function (host) {
+    hosts.forEach(function (host) {
         GM_xmlhttpRequest({
             method: 'HEAD',
             url: 'https://' + host + '/',
@@ -94,20 +90,6 @@
     window.NX.getMeId = meId;
     window.NX.getMeName = meName;
 
-    function refreshRole() {
-        if (!window.NX.server || typeof window.NX.server.me !== 'function') {
-            return Promise.resolve(null);
-        }
-        return window.NX.server.me().then(function (res) {
-            if (res && res.status === 200 && res.data && res.data.user) {
-                var u = res.data.user;
-                window.NX.role = u.role || (u.isAdmin ? 'admin' : 'user');
-            }
-            return window.NX.role;
-        }).catch(function () { return null; });
-    }
-    window.NX.refreshRole = refreshRole;
-
     function sidebarList() {
         return document.querySelector('#left-navigation-container .left-col-list')
             || document.querySelector('.left-col-list');
@@ -123,37 +105,6 @@
         return null;
     }
 
-    function makeItem(id, icon, label, href, onClick) {
-        var li = document.createElement('li');
-        var a = document.createElement('a');
-        a.className = 'dynamic-overflow-container text-nav';
-        a.id = id;
-        a.href = href || '/#';
-
-        var wrap = document.createElement('div');
-        var ic = document.createElement('span');
-        ic.className = icon;
-        wrap.appendChild(ic);
-
-        var txt = document.createElement('span');
-        txt.className = 'font-header-2 dynamic-ellipsis-item';
-        txt.textContent = label;
-
-        a.appendChild(wrap);
-        a.appendChild(txt);
-
-        if (onClick) {
-            a.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                onClick();
-            }, true);
-        }
-
-        li.appendChild(a);
-        return li;
-    }
-
     function injectSidebar() {
         var list = sidebarList();
         if (!list) return;
@@ -161,27 +112,32 @@
         if (!anchor) return;
 
         if (!document.getElementById('nav-nexus')) {
-            var nexus = makeItem('nav-nexus', 'icon-nav-blog', 'Nexus', '/#', function () {
+            var li = document.createElement('li');
+            var a = document.createElement('a');
+            a.className = 'dynamic-overflow-container text-nav';
+            a.id = 'nav-nexus';
+            a.href = '/#';
+
+            var wrap = document.createElement('div');
+            var ic = document.createElement('span');
+            ic.className = 'icon-nav-blog';
+            wrap.appendChild(ic);
+
+            var txt = document.createElement('span');
+            txt.className = 'font-header-2 dynamic-ellipsis-item';
+            txt.textContent = 'Nexus';
+
+            a.appendChild(wrap);
+            a.appendChild(txt);
+
+            a.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
                 window.NX.ui.modal.build();
-            });
-            anchor.parentNode.insertBefore(nexus, anchor.nextSibling);
-        }
+            }, true);
 
-        var r = window.NX.role;
-        var isAdmin = r === 'admin' || r === 'dev' || r === 'moderator';
-
-        if (isAdmin && !document.getElementById('nav-nexus-admin')) {
-            var admin = makeItem('nav-nexus-admin', 'icon-nav-group', 'Nexus Admin',
-                '/home' + ADMIN_HASH);
-            var nexusBtn = document.getElementById('nav-nexus');
-            if (nexusBtn && nexusBtn.parentNode) {
-                nexusBtn.parentNode.insertAdjacentElement('afterend', admin);
-            }
-        }
-
-        if (!isAdmin) {
-            var stale = document.getElementById('nav-nexus-admin');
-            if (stale) stale.remove();
+            li.appendChild(a);
+            anchor.parentNode.insertBefore(li, anchor.nextSibling);
         }
     }
 
@@ -198,7 +154,6 @@
         if (s.get('explorer') && f.explorer) f.explorer.apply();
         if (s.get('customBackground') && f.customBackground) f.customBackground.apply();
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
-        if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -249,10 +204,8 @@
     });
 
     function boot() {
-        refreshRole().then(function () {
-            applyAll();
-            tick();
-        });
+        applyAll();
+        tick();
     }
 
     if (document.readyState === 'loading') {
