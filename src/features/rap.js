@@ -22,19 +22,20 @@
         return p.get('userId') || p.get('viewerId');
     }
 
-    function addRap() {
+    function addRapRow() {
         var userId = userFromUrl();
         if (!userId) return true;
 
         var list = document.querySelector('.details-info');
         if (!list) return false;
+
         if (list.querySelector('.nx-rap-row')) return true;
 
         var items = list.querySelectorAll('li');
         var followingLi = null;
         for (var i = 0; i < items.length; i++) {
-            var label = items[i].querySelector('.text-label');
-            if (label && (label.textContent || '').trim() === 'Following') {
+            var lbl = items[i].querySelector('.text-label');
+            if (lbl && (lbl.textContent || '').trim() === 'Following') {
                 followingLi = items[i];
                 break;
             }
@@ -44,12 +45,12 @@
         var li = followingLi.cloneNode(true);
         li.classList.add('nx-rap-row');
 
-        var lbl = li.querySelector('.text-label');
-        if (lbl) {
-            lbl.textContent = 'RAP';
-            lbl.removeAttribute('ng-bind');
-            lbl.removeAttribute('data-ng-bind');
-            lbl.classList.remove('ng-binding');
+        var label = li.querySelector('.text-label');
+        if (label) {
+            label.textContent = 'RAP';
+            label.removeAttribute('ng-bind');
+            label.removeAttribute('data-ng-bind');
+            label.classList.remove('ng-binding');
         }
 
         var span = li.querySelector('.font-header-2');
@@ -82,22 +83,30 @@
         return true;
     }
 
-    var scanner = null;
+    function start() {
+        if (addRapRow()) return;
+
+        var tries = 0;
+        var iv = setInterval(function() {
+            if (addRapRow() || ++tries > 120) clearInterval(iv);
+        }, 250);
+    }
+
+    var mo = null;
 
     window.NX.features.rap = {
         apply: function() {
-            if (!addRap() && !scanner) {
-                var tries = 0;
-                scanner = setInterval(function() {
-                    if (addRap() || ++tries > 60) {
-                        clearInterval(scanner);
-                        scanner = null;
-                    }
-                }, 250);
-            }
+            start();
+            if (mo) return;
+            var target = document.body || document.documentElement;
+            if (!target) return;
+            mo = new MutationObserver(function() {
+                if (!document.querySelector('.nx-rap-row')) addRapRow();
+            });
+            mo.observe(target, { childList: true, subtree: true });
         },
         teardown: function() {
-            if (scanner) { clearInterval(scanner); scanner = null; }
+            if (mo) { mo.disconnect(); mo = null; }
             var r = document.querySelector('.nx-rap-row');
             if (r) r.remove();
         }
