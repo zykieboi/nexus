@@ -4,184 +4,267 @@
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
+    var PANEL_ID = 'nx-bulk-panel';
+    var STYLE_ID = 'nx-bulk-style';
+    var CSRF_KEY = 'nx_csrf_bulk';
+
     function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
         catch (e) { return false; }
     }
 
+    function userFromUrl() {
+        var m = location.pathname.match(/\/users\/(\d+)\//);
+        if (m) return m[1];
+        var p = new URLSearchParams(location.search);
+        return p.get('userId') || p.get('viewerId');
+    }
+
+    function getCsrf() {
+        try { return GM_getValue(CSRF_KEY, ''); } catch (e) { return ''; }
+    }
+    function setCsrf(v) {
+        try { GM_setValue(CSRF_KEY, v); } catch (e) {}
+    }
+
+    function request(url, opts) {
+        opts = opts || {};
+        opts.credentials = 'include';
+        opts.headers = opts.headers || {};
+        if (opts.body && !opts.headers['Content-Type']) {
+            opts.headers['Content-Type'] = 'application/json';
+        }
+        var token = getCsrf();
+        if (token) opts.headers['X-CSRF-Token'] = token;
+
+        return fetch(url, opts).then(function(r) {
+            if (r.status === 403) {
+                var fresh = r.headers.get('x-csrf-token');
+                if (fresh && fresh !== token) {
+                    setCsrf(fresh);
+                    opts.headers['X-CSRF-Token'] = fresh;
+                    return fetch(url, opts);
+                }
+            }
+            return r;
+        });
+    }
+
+    function style() {
+        if (document.getElementById(STYLE_ID)) return;
+        var d = dark();
+        var bg = d ? '#232527' : '#ffffff';
+        var border = d ? '#3a3d40' : '#c7cbce';
+        var text = d ? '#e0e0e0' : '#232527';
+        var muted = d ? '#7a7d80' : '#6a6d70';
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = [
+            '#' + PANEL_ID + '{position:fixed;top:52px;right:14px;z-index:2147483640;',
+            'width:320px;max-height:80vh;overflow:auto;background:' + bg + ';',
+            'color:' + text + ';border:1px solid ' + border + ';border-radius:8px;',
+            'padding:14px;font-family:inherit;font-size:13px;',
+            'box-shadow:0 6px 24px rgba(0,0,0,0.25);}',
+            '#' + PANEL_ID + ' h3{margin:0 0 10px;font-size:14px;font-weight:600;}',
+            '#' + PANEL_ID + ' .nx-row{display:flex;align-items:center;gap:8px;',
+            'padding:6px 0;border-bottom:1px solid ' + (d ? '#2a2c2e' : '#e1e4e8') + ';}',
+            '#' + PANEL_ID + ' .nx-row:last-child{border-bottom:0;}',
+            '#' + PANEL_ID + ' .nx-row img{width:32px;height:32px;border-radius:50%;',
+            'background:' + border + ';}',
+            '#' + PANEL_ID + ' .nx-row .name{flex:1;overflow:hidden;',
+            'text-overflow:ellipsis;white-space:nowrap;}',
+            '#' + PANEL_ID + ' .nx-toolbar{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}',
+            '#' + PANEL_ID + ' button{padding:5px 10px;font-size:12px;',
+            'border-radius:5px;border:1px solid ' + border + ';background:transparent;',
+            'color:' + text + ';cursor:pointer;font-family:inherit;}',
+            '#' + PANEL_ID + ' button:hover{background:' + (d ? '#2a2c2e' : '#e8eef5') + ';}',
+            '#' + PANEL_ID + ' button.danger{border-color:#e5484d;color:#e5484d;}',
+            '#' + PANEL_ID + ' button.danger:hover{background:#e5484d;color:#fff;}',
+            '#' + PANEL_ID + ' button:disabled{opacity:0.5;cursor:not-allowed;}',
+            '#' + PANEL_ID + ' .count{color:' + muted + ';font-size:12px;}',
+            '#' + PANEL_ID + ' .close{position:absolute;top:8px;right:10px;',
+            'background:none;border:0;color:' + muted + ';font-size:18px;cursor:pointer;}',
+            '#' + PANEL_ID + ' .close:hover{color:' + text + ';}'
+        ].join('');
+        document.head.appendChild(s);
+    }
+
+    var state = {
+        friends: [],
+        selected: {},
+        busy: false,
+        status: ''
+    };
+
+    function renderPanel() {
+        var old = document.getElementById(PANEL_ID);
+        if (old) old.remove();
+        if (!state.friends.length && !state.busy && !state.status) return;
+
+        style();
+        var panel = document.createElement('div');
+        panel.id = PANEL_ID;
+
+        var close = document.createElement('button');
+        close.className = 'close';
+        close.textContent = '\u00d7';
+        close.addEventListener('click', function() { panel.remove(); });
+        panel.appendChild(close);
+
+        var h = document.createElement('h3');
+        h.textContent = 'Bulk Unfriend';
+        panel.appendChild(h);
+
+        var count = document.createElement('div');
+        count.className = 'count';
+        var sel = Object.keys(state.selected).filter(function(k) { return state.selected[k]; }).length;
+        count.textContent = state.friends.length + ' friends • ' + sel + ' selected';
+        panel.appendChild(count);
+
+        var bar = document.createElement('div');
+        bar.className = 'nx-toolbar';
+
+        var selectAll = document.createElement('button');
+        selectAll.textContent = 'Select All';
+        selectAll.addEventListener('click', function() {
+            state.friends.forEach(function(f) { state.selected[f.id] = true; });
+            renderPanel();
+        });
+        bar.appendChild(selectAll);
+
+        var deselectAll = document.createElement('button');
+        deselectAll.textContent = 'Deselect All';
+        deselectAll.addEventListener('click', function() {
+            state.selected = {};
+            renderPanel();
+        });
+        bar.appendChild(deselectAll);
+
+        var unfriend = document.createElement('button');
+        unfriend.className = 'danger';
+        unfriend.textContent = 'Unfriend Selected';
+        unfriend.disabled = state.busy || sel === 0;
+        unfriend.addEventListener('click', doUnfriend);
+        bar.appendChild(unfriend);
+
+        panel.appendChild(bar);
+
+        state.friends.forEach(function(f) {
+            var row = document.createElement('label');
+            row.className = 'nx-row';
+
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = !!state.selected[f.id];
+            cb.addEventListener('change', function() {
+                state.selected[f.id] = cb.checked;
+                renderPanel();
+            });
+            row.appendChild(cb);
+
+            var img = document.createElement('img');
+            img.src = 'https://tcdn.octane.wtf/' + f.id + '_headshot.png';
+            img.onerror = function() { img.style.visibility = 'hidden'; };
+            row.appendChild(img);
+
+            var name = document.createElement('span');
+            name.className = 'name';
+            name.textContent = f.displayName || f.name || ('User ' + f.id);
+            row.appendChild(name);
+
+            panel.appendChild(row);
+        });
+
+        if (state.status) {
+            var st = document.createElement('div');
+            st.className = 'count';
+            st.style.marginTop = '8px';
+            st.textContent = state.status;
+            panel.appendChild(st);
+        }
+
+        document.body.appendChild(panel);
+    }
+
+    function loadFriends() {
+        var userId = userFromUrl();
+        if (!userId) return;
+
+        request('/apisite/friends/v1/users/' + userId + '/friends?limit=100')
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                state.friends = (d && d.data) || [];
+                renderPanel();
+            })
+            .catch(function() {
+                state.status = 'Failed to load friends';
+                renderPanel();
+            });
+    }
+
+    function doUnfriend() {
+        var ids = Object.keys(state.selected).filter(function(k) { return state.selected[k]; });
+        if (!ids.length) return;
+        if (!confirm('Unfriend ' + ids.length + ' user(s)?')) return;
+
+        state.busy = true;
+        state.status = 'Working…';
+        renderPanel();
+
+        var ok = 0, fail = 0;
+        var i = 0;
+
+        function next() {
+            if (i >= ids.length) {
+                state.busy = false;
+                state.status = 'Done. Unfriended: ' + ok + ', failed: ' + fail;
+                state.selected = {};
+                loadFriends();
+                return;
+            }
+            var id = ids[i++];
+            request('/apisite/friends/v1/users/' + id + '/unfriend', {
+                method: 'POST',
+                body: JSON.stringify({ targetUserId: Number(id) })
+            }).then(function(r) {
+                if (r.ok) ok++; else fail++;
+                state.status = 'Working… ' + (i) + '/' + ids.length;
+                renderPanel();
+                setTimeout(next, 1500);
+            }).catch(function() {
+                fail++;
+                setTimeout(next, 1500);
+            });
+        }
+
+        next();
+    }
+
+    var scanner = null;
+
     window.NX.features.bulkUnfriend = {
         apply: function() {
-            var container = document.querySelector(
-                '.friendsContainer-0-2-204, [class*="friendsContainer-"]'
-            );
-            var existing = document.querySelector('.nx-bulk-toolbar');
-
-            if (!container) {
-                if (existing) existing.remove();
-                document.querySelectorAll('.nx-friend-checkbox').forEach(function(c) { c.remove(); });
+            if (!/\/users\/\d+\/friends/.test(location.pathname)) {
+                var old = document.getElementById(PANEL_ID);
+                if (old) old.remove();
                 return;
             }
-
-            var header = container.querySelector('h2');
-            if (!header || header.textContent.indexOf('FRIENDS') === -1) {
-                if (existing) existing.remove();
-                document.querySelectorAll('.nx-friend-checkbox').forEach(function(c) { c.remove(); });
-                return;
+            if (!document.getElementById(PANEL_ID)) {
+                loadFriends();
             }
-
-            if (container.querySelector('.nx-bulk-toolbar')) return;
-
-            var cards = container.querySelectorAll(
-                '.friendCardWrapper-0-2-207, [class*="friendCardWrapper-"]'
-            );
-            if (!cards.length) return;
-
-            var d = dark();
-            var counterColor = d ? '#9a9da0' : '#666';
-            var secondary = d ? '#3a3d40' : '#e1e4e8';
-            var secondaryHover = d ? '#4a4d50' : '#d0d4d8';
-            var secondaryText = d ? '#e0e0e0' : '#232527';
-
-            cards.forEach(function(card) {
-                if (card.querySelector('.nx-friend-checkbox')) return;
-                var cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.className = 'nx-friend-checkbox';
-                cb.style.cssText =
-                    'position:absolute;top:8px;right:8px;z-index:10;' +
-                    'width:18px;height:18px;cursor:pointer;';
-                card.style.position = 'relative';
-                card.appendChild(cb);
-            });
-
-            var bar = document.createElement('div');
-            bar.className = 'nx-bulk-toolbar';
-            bar.style.cssText =
-                'display:flex;align-items:center;gap:12px;padding:10px 0;' +
-                'margin-bottom:10px;flex-wrap:wrap;';
-
-            var selectAll = document.createElement('button');
-            selectAll.textContent = 'Select All';
-            selectAll.style.cssText =
-                'padding:6px 14px;background:#00a2ff;color:#fff;border:none;' +
-                'border-radius:4px;cursor:pointer;font-size:13px;font-family:inherit;';
-
-            var deselect = document.createElement('button');
-            deselect.textContent = 'Deselect All';
-            deselect.style.cssText =
-                'padding:6px 14px;background:' + secondary + ';color:' + secondaryText + ';' +
-                'border:none;border-radius:4px;cursor:pointer;font-size:13px;font-family:inherit;';
-
-            var unfriend = document.createElement('button');
-            unfriend.textContent = 'Unfriend Selected';
-            unfriend.style.cssText =
-                'padding:6px 14px;background:#d9534f;color:#fff;border:none;' +
-                'border-radius:4px;cursor:pointer;font-size:13px;margin-left:auto;' +
-                'font-family:inherit;';
-
-            var counter = document.createElement('span');
-            counter.style.cssText = 'font-size:13px;color:' + counterColor + ';';
-            counter.textContent = '0 selected';
-
-            function update() {
-                var n = container.querySelectorAll('.nx-friend-checkbox:checked').length;
-                counter.textContent = n + ' selected';
-            }
-
-            selectAll.onclick = function() {
-                container.querySelectorAll('.nx-friend-checkbox').forEach(function(c) {
-                    c.checked = true;
-                });
-                update();
-            };
-
-            deselect.onclick = function() {
-                container.querySelectorAll('.nx-friend-checkbox').forEach(function(c) {
-                    c.checked = false;
-                });
-                update();
-            };
-
-            unfriend.onclick = async function() {
-                var checked = container.querySelectorAll('.nx-friend-checkbox:checked');
-                if (!checked.length) return alert('No friends selected');
-                if (!confirm('Unfriend ' + checked.length + ' friend(s)?')) return;
-
-                var csrf = window.NX_CSRF;
-                if (!csrf) return alert('No CSRF token captured yet.');
-
-                var ids = [];
-                for (var i = 0; i < checked.length; i++) {
-                    var card = checked[i].closest(
-                        '.friendCardWrapper-0-2-207, [class*="friendCardWrapper-"]'
-                    );
-                    if (!card) continue;
-                    var link = card.querySelector('a[href*="/users/"]');
-                    if (!link) continue;
-                    var m = link.getAttribute('href').match(/\/users\/(\d+)/);
-                    if (!m) continue;
-                    ids.push(parseInt(m[1], 10));
+            if (!scanner) scanner = setInterval(function() {
+                if (/\/users\/\d+\/friends/.test(location.pathname)) {
+                    if (!document.getElementById(PANEL_ID) && !state.busy) loadFriends();
+                } else {
+                    var old = document.getElementById(PANEL_ID);
+                    if (old) old.remove();
                 }
-
-                if (!ids.length) return alert('No valid friends found');
-
-                var ok = 0;
-                var fail = 0;
-
-                for (var j = 0; j < ids.length; j++) {
-                    var id = ids[j];
-                    try {
-                        var r = await fetch('/apisite/friends/v1/users/' + id + '/unfriend', {
-                            method: 'POST',
-                            credentials: 'include',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-Token': csrf
-                            },
-                            body: JSON.stringify({ targetUserId: id })
-                        });
-                        if (r.ok) {
-                            ok++;
-                            var a = document.querySelector('a[href*="/users/' + id + '/"]');
-                            if (a) {
-                                var w = a.closest(
-                                    '.friendCardWrapper-0-2-207, [class*="friendCardWrapper-"]'
-                                );
-                                if (w) {
-                                    w.style.opacity = '0.3';
-                                    w.style.pointerEvents = 'none';
-                                }
-                            }
-                        } else {
-                            fail++;
-                        }
-                    } catch (e) {
-                        fail++;
-                    }
-                    await new Promise(function(res) { setTimeout(res, 2000); });
-                }
-
-                alert('Unfriended: ' + ok + '\nFailed: ' + fail);
-                location.reload();
-            };
-
-            container.addEventListener('change', function(e) {
-                if (e.target.classList.contains('nx-friend-checkbox')) update();
-            });
-
-            bar.appendChild(selectAll);
-            bar.appendChild(deselect);
-            bar.appendChild(counter);
-            bar.appendChild(unfriend);
-
-            var firstRow = container.querySelector('.row');
-            if (firstRow) firstRow.parentNode.insertBefore(bar, firstRow);
-            else container.prepend(bar);
+            }, 500);
         },
         teardown: function() {
-            var bar = document.querySelector('.nx-bulk-toolbar');
-            if (bar) bar.remove();
-            document.querySelectorAll('.nx-friend-checkbox').forEach(function(c) { c.remove(); });
+            if (scanner) { clearInterval(scanner); scanner = null; }
+            var old = document.getElementById(PANEL_ID);
+            if (old) old.remove();
         }
     };
 })();
