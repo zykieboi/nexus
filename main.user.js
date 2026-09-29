@@ -25,7 +25,7 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/explorer.js?v=2
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js
