@@ -11,16 +11,15 @@
     }
 
     var origFetch = window.fetch;
-    window.fetch = function(input, init) {
-        var p = origFetch.apply(this, arguments);
-        try {
-            p.then(function(res) {
-                try {
-                    var t = res && res.headers && res.headers.get('x-csrf-token');
-                    if (t) save(t);
-                } catch (e) {}
-            }).catch(function() {});
-        } catch (e) {}
+    window.fetch = function() {
+        var args = arguments;
+        var p = origFetch.apply(this, args);
+        p.then(function(res) {
+            try {
+                var t = res.headers.get('x-csrf-token');
+                if (t) save(t);
+            } catch (e) {}
+        }).catch(function() {});
         return p;
     };
 
