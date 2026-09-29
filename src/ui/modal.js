@@ -171,10 +171,6 @@
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
             },
-            customBackground: {
-                cat: 'visual', label: 'Custom Background',
-                desc: 'Replace the site background with an image, gif, or video.'
-            },
             customLogo: {
                 cat: 'visual', label: 'Custom Logo',
                 desc: 'Replace the navbar logo with your own image.'
