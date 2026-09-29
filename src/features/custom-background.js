@@ -164,24 +164,111 @@
         paintOverlay();
     }
 
+    // --- NEW: reach into same-origin iframes (theme2020/home, theme2020/chat)
+    //     and strip their own backgrounds too. Without this, those iframes
+    //     paint solid rectangles over the top of our background layer.
+    function makeIframesTransparent() {
+        var iframes = document.querySelectorAll('iframe');
+        iframes.forEach(function(frame) {
+            try {
+                var doc = frame.contentDocument;
+                if (!doc || !doc.head) return;
+
+                var styleId = 'nx-bg-transparent-iframe';
+                var existing = doc.getElementById(styleId);
+                if (existing) existing.remove();
+
+                var style = doc.createElement('style');
+                style.id = styleId;
+                style.textContent = [
+                    'html,body{background:transparent !important;}',
+                    'body{color-scheme:dark;}',
+                    '.container-main,.content,.section-content,.main-content{background:transparent !important;}',
+                    '[class*="card-0-2-"]{background:rgba(35,37,39,0.85) !important;backdrop-filter:blur(6px);}',
+                    'html.octane-dark body{background:transparent !important;}'
+                ].join('');
+                doc.head.appendChild(style);
+            } catch (e) {
+                // Cross-origin iframe — nothing we can do here, skip it.
+            }
+        });
+    }
+
     function pageTransparent() {
-        var s = document.getElementById(TRANS_ID);
-        if (s) s.remove();
-        s = document.createElement('style');
-        s.id = TRANS_ID;
-        s.textContent = [
+        var existing = document.getElementById(TRANS_ID);
+        if (existing) existing.remove();
+
+        var isDark = dark();
+        var cardBackground = isDark
+            ? 'rgba(35,37,39,0.85)'
+            : 'rgba(255,255,255,0.85)';
+
+        var style = document.createElement('style');
+        style.id = TRANS_ID;
+        style.textContent = [
+            // Base page
             'html,body{background:transparent !important;}',
-            '.main-0-2-8,.main-0-2-45{background:transparent !important;}',
-            '[class*="card-0-2-"]{background:' +
-                (dark() ? 'rgba(35,37,39,0.85)' : 'rgba(255,255,255,0.85)') +
-                ' !important;backdrop-filter:blur(6px);}'
+
+            // Main content wrapper around the iframe / cards
+            '.main-0-2-8,.main-0-2-45,[class*="main-0-2-"]{background:transparent !important;}',
+
+            // The dark-mode overlay Octane slaps over content
+            '.octane-nav-offset{background:transparent !important;}',
+            'html.octane-dark .octane-nav-offset{background:transparent !important;}',
+            'html.octane-dark .octane-nav-offset .bg-white{background:transparent !important;}',
+
+            // Top announcement / alert bar
+            '.alertBg-0-2-1,.alertBg-d0-0-2-5,[class*="alertBg-"]{background:transparent !important;}',
+            '.fakeAlert-0-2-4{background:transparent !important;}',
+
+            // Iframe elements themselves — the document inside gets its own
+            // style injected by makeIframesTransparent().
+            '.main-0-2-8 iframe,.octane-nav-offset iframe{background:transparent !important;}',
+
+            // Cards keep a soft backdrop so text stays readable
+            '[class*="card-0-2-"]{background:' + cardBackground + ' !important;backdrop-filter:blur(6px);}'
         ].join('');
-        document.head.appendChild(s);
+
+        document.head.appendChild(style);
+
+        // Now reach into the iframes.
+        makeIframesTransparent();
+
+        // If they load lazily, try again after the fact.
+        document.querySelectorAll('iframe').forEach(function(frame) {
+            if (!frame.dataset.nxBgBound) {
+                frame.dataset.nxBgBound = '1';
+                frame.addEventListener('load', function() {
+                    if (url()) makeIframesTransparent();
+                });
+            }
+        });
+
+        // Rebuild stylesheet when the theme flips, so card colors update.
+        if (!document.body.dataset.nxBgThemeWatch) {
+            document.body.dataset.nxBgThemeWatch = '1';
+            window.addEventListener('octane-theme-change', function() {
+                if (url()) pageTransparent();
+            });
+            window.addEventListener('storage', function(event) {
+                if (event.key === 'rbx_theme_v1' && url()) pageTransparent();
+            });
+        }
     }
 
     function removeTransparent() {
         var s = document.getElementById(TRANS_ID);
         if (s) s.remove();
+
+        // Also clean up the iframe-side styles we injected.
+        document.querySelectorAll('iframe').forEach(function(frame) {
+            try {
+                var doc = frame.contentDocument;
+                if (!doc) return;
+                var style = doc.getElementById('nx-bg-transparent-iframe');
+                if (style) style.remove();
+            } catch (e) { /* cross-origin, skip */ }
+        });
     }
 
     function panelStyle() {
@@ -311,7 +398,6 @@
 
     function buildPanel() {
         if (hidden) return;
-        // purge ALL panels with this id (in case of orphans from a previous build)
         removeAllPanels();
         panelStyle();
 
@@ -557,7 +643,6 @@
         if (l) l.remove();
         var o = document.getElementById('nx-bg-overlay');
         if (o) o.remove();
-        // kill any orphaned panels before rebuilding
         removeAllPanels();
 
         if (!url()) {
@@ -579,6 +664,8 @@
                     pageTransparent();
                     buildLayer();
                 }
+                // New page => new iframes => re-strip their backgrounds.
+                if (url()) makeIframesTransparent();
                 if (!document.getElementById(PANEL_ID) && !hidden) buildPanel();
             }
         }, 400);
