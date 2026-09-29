@@ -25,7 +25,6 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js?v=6
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=5
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
@@ -192,7 +191,6 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
-        if (s.get('customBackground') && f.customBackground) f.customBackground.apply();
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (f.announcement) f.announcement.apply();
