@@ -10,16 +10,26 @@
     var STYLE_ID = 'nx-bulk-style';
     var CSRF_KEY = 'nx_csrf_bulk';
 
-    function dark() {
-        try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
-        catch (e) { return false; }
-    }
-
     function userFromUrl() {
         var m = location.pathname.match(/\/users\/(\d+)\//);
         if (m) return m[1];
         var p = new URLSearchParams(location.search);
         return p.get('userId') || p.get('viewerId');
+    }
+
+    function friendsIframe() {
+        var main = document.querySelector('.main-0-2-8');
+        if (!main) return null;
+        return main.querySelector('iframe[src*="/theme2020/users/"]');
+    }
+
+    function onFriendsTab() {
+        if (!/\/users\/\d+\/friends/.test(location.pathname)) return false;
+        var f = friendsIframe();
+        if (!f) return false;
+        var href;
+        try { href = f.contentWindow.location.href; } catch (e) { return true; }
+        return /#!\/friends\b/.test(href) || href.indexOf('#!') === -1;
     }
 
     function getCsrf() {
@@ -54,39 +64,26 @@
 
     function style() {
         if (document.getElementById(STYLE_ID)) return;
-        var d = dark();
-        var bg = d ? '#232527' : '#ffffff';
-        var border = d ? '#3a3d40' : '#c7cbce';
-        var text = d ? '#e0e0e0' : '#232527';
-        var muted = d ? '#7a7d80' : '#6a6d70';
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:fixed;top:52px;right:14px;z-index:2147483640;',
-            'width:320px;max-height:80vh;overflow:auto;background:' + bg + ';',
-            'color:' + text + ';border:1px solid ' + border + ';border-radius:8px;',
-            'padding:14px;font-family:inherit;font-size:13px;',
-            'box-shadow:0 6px 24px rgba(0,0,0,0.25);}',
-            '#' + PANEL_ID + ' h3{margin:0 0 10px;font-size:14px;font-weight:600;}',
-            '#' + PANEL_ID + ' .nx-row{display:flex;align-items:center;gap:8px;',
-            'padding:6px 0;border-bottom:1px solid ' + (d ? '#2a2c2e' : '#e1e4e8') + ';}',
-            '#' + PANEL_ID + ' .nx-row:last-child{border-bottom:0;}',
-            '#' + PANEL_ID + ' .nx-row img{width:32px;height:32px;border-radius:50%;',
-            'background:' + border + ';}',
-            '#' + PANEL_ID + ' .nx-row .name{flex:1;overflow:hidden;',
-            'text-overflow:ellipsis;white-space:nowrap;}',
-            '#' + PANEL_ID + ' .nx-toolbar{display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;}',
-            '#' + PANEL_ID + ' button{padding:5px 10px;font-size:12px;',
-            'border-radius:5px;border:1px solid ' + border + ';background:transparent;',
-            'color:' + text + ';cursor:pointer;font-family:inherit;}',
-            '#' + PANEL_ID + ' button:hover{background:' + (d ? '#2a2c2e' : '#e8eef5') + ';}',
-            '#' + PANEL_ID + ' button.danger{border-color:#e5484d;color:#e5484d;}',
-            '#' + PANEL_ID + ' button.danger:hover{background:#e5484d;color:#fff;}',
+            '#' + PANEL_ID + '{position:absolute;left:0;right:0;',
+            'display:flex;align-items:center;gap:12px;padding:0 16px;height:48px;',
+            'background:transparent;font-family:inherit;font-size:14px;',
+            'z-index:5;box-sizing:border-box;pointer-events:none;}',
+            '#' + PANEL_ID + ' > *{pointer-events:auto;}',
+            '#' + PANEL_ID + ' .count{color:#6a6d70;font-size:13px;}',
+            '#' + PANEL_ID + ' button{padding:6px 14px;font-size:13px;border-radius:4px;',
+            'border:1px solid #c7cbce;background:#fff;color:#232527;cursor:pointer;',
+            'font-family:inherit;}',
+            '#' + PANEL_ID + ' button:hover{background:#e8eef5;}',
+            '#' + PANEL_ID + ' button.danger{border-color:#d9534f;color:#d9534f;}',
+            '#' + PANEL_ID + ' button.danger:hover{background:#d9534f;color:#fff;}',
             '#' + PANEL_ID + ' button:disabled{opacity:0.5;cursor:not-allowed;}',
-            '#' + PANEL_ID + ' .count{color:' + muted + ';font-size:12px;}',
-            '#' + PANEL_ID + ' .close{position:absolute;top:8px;right:10px;',
-            'background:none;border:0;color:' + muted + ';font-size:18px;cursor:pointer;}',
-            '#' + PANEL_ID + ' .close:hover{color:' + text + ';}'
+            'html.octane-dark #' + PANEL_ID + ' .count{color:#7a7d80;}',
+            'html.octane-dark #' + PANEL_ID + ' button{background:transparent;',
+            'border-color:#3a3d40;color:#e0e0e0;}',
+            'html.octane-dark #' + PANEL_ID + ' button:hover{background:#2a2c2e;}'
         ].join('');
         document.head.appendChild(s);
     }
@@ -108,30 +105,17 @@
         if (old) old.remove();
         if (!state.loaded) return;
 
+        var main = document.querySelector('.main-0-2-8');
+        if (!main) return;
+        var iframe = friendsIframe();
+        if (!iframe) return;
+
         style();
+        main.style.position = 'relative';
+
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
-
-        var close = document.createElement('button');
-        close.className = 'close';
-        close.textContent = '\u00d7';
-        close.addEventListener('click', function() {
-            panel.remove();
-            state.loaded = false;
-        });
-        panel.appendChild(close);
-
-        var h = document.createElement('h3');
-        h.textContent = 'Bulk Unfriend';
-        panel.appendChild(h);
-
-        var count = document.createElement('div');
-        count.className = 'count';
-        count.textContent = state.friends.length + ' friends \u2022 ' + selectedCount() + ' selected';
-        panel.appendChild(count);
-
-        var bar = document.createElement('div');
-        bar.className = 'nx-toolbar';
+        panel.style.top = '155px';
 
         var selectAll = document.createElement('button');
         selectAll.textContent = 'Select All';
@@ -140,7 +124,7 @@
             state.friends.forEach(function(f) { state.selected[f.id] = true; });
             renderPanel();
         });
-        bar.appendChild(selectAll);
+        panel.appendChild(selectAll);
 
         var deselectAll = document.createElement('button');
         deselectAll.textContent = 'Deselect All';
@@ -149,61 +133,28 @@
             state.selected = {};
             renderPanel();
         });
-        bar.appendChild(deselectAll);
+        panel.appendChild(deselectAll);
+
+        var count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = state.friends.length + ' friends \u2022 ' + selectedCount() + ' selected';
+        panel.appendChild(count);
 
         var unfriend = document.createElement('button');
         unfriend.className = 'danger';
         unfriend.textContent = 'Unfriend Selected';
         unfriend.disabled = state.busy || selectedCount() === 0;
         unfriend.addEventListener('click', doUnfriend);
-        bar.appendChild(unfriend);
-
-        panel.appendChild(bar);
-
-        if (!state.friends.length) {
-            var empty = document.createElement('div');
-            empty.className = 'count';
-            empty.style.marginTop = '8px';
-            empty.textContent = 'No friends to unfriend.';
-            panel.appendChild(empty);
-        } else {
-            state.friends.forEach(function(f) {
-                var row = document.createElement('label');
-                row.className = 'nx-row';
-
-                var cb = document.createElement('input');
-                cb.type = 'checkbox';
-                cb.checked = !!state.selected[f.id];
-                cb.disabled = state.busy;
-                cb.addEventListener('change', function() {
-                    state.selected[f.id] = cb.checked;
-                    renderPanel();
-                });
-                row.appendChild(cb);
-
-                var img = document.createElement('img');
-                img.src = 'https://tcdn.octane.wtf/' + f.id + '_headshot.png';
-                img.onerror = function() { img.style.visibility = 'hidden'; };
-                row.appendChild(img);
-
-                var name = document.createElement('span');
-                name.className = 'name';
-                name.textContent = f.displayName || f.name || ('User ' + f.id);
-                row.appendChild(name);
-
-                panel.appendChild(row);
-            });
-        }
+        panel.appendChild(unfriend);
 
         if (state.status) {
-            var st = document.createElement('div');
+            var st = document.createElement('span');
             st.className = 'count';
-            st.style.marginTop = '8px';
             st.textContent = state.status;
             panel.appendChild(st);
         }
 
-        document.body.appendChild(panel);
+        main.appendChild(panel);
     }
 
     function loadFriends() {
@@ -265,31 +216,36 @@
     }
 
     var scanner = null;
-
-    function onFriendsPage() {
-        return /\/users\/\d+\/friends/.test(location.pathname);
-    }
+    var lastUserId = null;
 
     window.NX.features.bulkUnfriend = {
         apply: function() {
-            if (!onFriendsPage()) {
+            if (!onFriendsTab()) {
                 var old = document.getElementById(PANEL_ID);
                 if (old) old.remove();
-                state.loaded = false;
                 return;
             }
-            if (!state.loaded && !state.busy) {
+
+            var userId = userFromUrl();
+            if (userId && userId !== lastUserId) {
+                lastUserId = userId;
+                state.friends = [];
+                state.selected = {};
+                state.status = '';
+                state.loaded = false;
+                loadFriends();
+            } else if (!document.getElementById(PANEL_ID)) {
                 loadFriends();
             }
+
             if (!scanner) scanner = setInterval(function() {
-                if (onFriendsPage()) {
-                    if (!state.loaded && !state.busy) loadFriends();
+                if (onFriendsTab()) {
+                    if (!document.getElementById(PANEL_ID)) loadFriends();
                 } else {
                     var old = document.getElementById(PANEL_ID);
                     if (old) old.remove();
-                    state.loaded = false;
                 }
-            }, 800);
+            }, 400);
         },
         teardown: function() {
             if (scanner) { clearInterval(scanner); scanner = null; }
