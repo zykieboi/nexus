@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.2
+// @version      1.0.7.3
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -22,7 +22,7 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=6
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=5
