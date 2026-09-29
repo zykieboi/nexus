@@ -22,78 +22,84 @@
         return p.get('userId') || p.get('viewerId');
     }
 
-    function fixRapRow(doc, userId) {
-        if (!doc || !doc.body) return;
+    function addRap() {
+        var userId = userFromUrl();
+        if (!userId) return true;
 
-        var labels = doc.querySelectorAll('.details-info .text-label');
-        var rapLabel = null;
-        for (var i = 0; i < labels.length; i++) {
-            if ((labels[i].textContent || '').trim().toUpperCase() === 'RAP') {
-                rapLabel = labels[i];
+        var list = document.querySelector('.details-info');
+        if (!list) return false;
+        if (list.querySelector('.nx-rap-row')) return true;
+
+        var items = list.querySelectorAll('li');
+        var followingLi = null;
+        for (var i = 0; i < items.length; i++) {
+            var label = items[i].querySelector('.text-label');
+            if (label && (label.textContent || '').trim() === 'Following') {
+                followingLi = items[i];
                 break;
             }
         }
-        if (!rapLabel) return;
+        if (!followingLi) return false;
 
-        var li = rapLabel.closest('li');
-        if (!li) return;
+        var li = followingLi.cloneNode(true);
+        li.classList.add('nx-rap-row');
 
-        var valueEl = li.querySelector('.font-header-2');
-        if (!valueEl) return;
+        var lbl = li.querySelector('.text-label');
+        if (lbl) {
+            lbl.textContent = 'RAP';
+            lbl.removeAttribute('ng-bind');
+            lbl.removeAttribute('data-ng-bind');
+            lbl.classList.remove('ng-binding');
+        }
 
-        if (valueEl.getAttribute('ng-bind')) valueEl.removeAttribute('ng-bind');
-        if (valueEl.getAttribute('data-ng-bind')) valueEl.removeAttribute('data-ng-bind');
-        if (valueEl.classList.contains('ng-binding')) valueEl.classList.remove('ng-binding');
+        var span = li.querySelector('.font-header-2');
+        if (span) {
+            span.textContent = '…';
+            span.removeAttribute('ng-bind');
+            span.removeAttribute('data-ng-bind');
+            span.classList.remove('ng-binding');
+        }
 
-        if (valueEl.dataset.nxRap === userId) return;
-        valueEl.dataset.nxRap = userId;
+        var link = li.querySelector('a.text-name');
+        if (link) link.setAttribute('href', '/users/' + userId + '/limiteds');
+
+        list.appendChild(li);
 
         fetch('/users/' + userId + '/limiteds', { credentials: 'include' })
             .then(function(r) { return r.text(); })
             .then(function(html) {
-                var match = html.match(/Total RAP:[\s\S]{0,400}?([\d,]+)/i);
-                if (!match) { delete valueEl.dataset.nxRap; return; }
-                var n = parseInt(match[1].replace(/,/g, ''), 10);
-                if (isNaN(n)) { delete valueEl.dataset.nxRap; return; }
-                valueEl.textContent = fmt(n);
-                valueEl.setAttribute('title', String(n));
+                var m = html.match(/Total RAP:[\s\S]{0,400}?([\d,]+)/i);
+                if (!m) { if (span) span.textContent = '0'; return; }
+                var n = parseInt(m[1].replace(/,/g, ''), 10);
+                if (isNaN(n)) { if (span) span.textContent = '0'; return; }
+                if (span) {
+                    span.textContent = fmt(n);
+                    span.setAttribute('title', String(n));
+                }
             })
-            .catch(function() {
-                delete valueEl.dataset.nxRap;
-            });
-    }
+            .catch(function() { if (span) span.textContent = '0'; });
 
-    function scan() {
-        var id = userFromUrl();
-        if (!id) return;
-
-        fixRapRow(document, id);
-
-        var frames = document.querySelectorAll('iframe[src*="/theme2020/users/"]');
-        for (var i = 0; i < frames.length; i++) {
-            try {
-                var d = frames[i].contentDocument;
-                if (d && d.body) fixRapRow(d, id);
-            } catch (e) {}
-        }
+        return true;
     }
 
     var scanner = null;
-    var observer = null;
 
     window.NX.features.rap = {
         apply: function() {
-            scan();
-            if (!scanner) scanner = setInterval(scan, 400);
-            if (observer) return;
-            var target = document.body || document.documentElement;
-            if (!target) return;
-            observer = new MutationObserver(scan);
-            observer.observe(target, { childList: true, subtree: true });
+            if (!addRap() && !scanner) {
+                var tries = 0;
+                scanner = setInterval(function() {
+                    if (addRap() || ++tries > 60) {
+                        clearInterval(scanner);
+                        scanner = null;
+                    }
+                }, 250);
+            }
         },
         teardown: function() {
             if (scanner) { clearInterval(scanner); scanner = null; }
-            if (observer) { observer.disconnect(); observer = null; }
+            var r = document.querySelector('.nx-rap-row');
+            if (r) r.remove();
         }
     };
 })();
