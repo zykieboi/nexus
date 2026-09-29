@@ -191,10 +191,6 @@
                 cat: 'function', label: 'RAP on Profile',
                 desc: 'Shows total RAP next to profile stats.'
             },
-            explorer: {
-                cat: 'function', label: 'Explorer',
-                desc: 'View the instance tree of any catalog asset.'
-            },
             removeAds: {
                 cat: 'performance', label: 'Remove Ads',
                 desc: 'Hides all advertisement banners across the site.'
