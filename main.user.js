@@ -19,7 +19,7 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js?v=3
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=4
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=3
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=3
