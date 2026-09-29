@@ -23,17 +23,15 @@
     }
 
     function fetchRap(userId) {
-        var url = '/apisite/economy/v1/users/' + userId + '/assets/collectibles?limit=100';
-        return fetch(url, { credentials: 'include' })
+        return fetch('/apisite/inventory/v1/users/' + userId + '/assets/collectibles',
+                     { credentials: 'include' })
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(d) {
-                if (!d) return 0;
-                var items = d.data || d.items || d.assets || d.collectibles || [];
-                if (!Array.isArray(items)) items = [];
+                if (!d || !d.data || !d.data.length) return 0;
                 var sum = 0;
-                for (var i = 0; i < items.length; i++) {
-                    var v = items[i].recentAveragePrice || items[i].rap || items[i].price || 0;
-                    sum += Number(v) || 0;
+                for (var i = 0; i < d.data.length; i++) {
+                    var v = Number(d.data[i].recentAveragePrice) || 0;
+                    sum += v;
                 }
                 return sum;
             })
@@ -47,8 +45,7 @@
         var list = document.querySelector('.details-info');
         if (!list) return false;
 
-        var existing = list.querySelector('.nx-rap-row');
-        if (existing) return true;
+        if (list.querySelector('.nx-rap-row')) return true;
 
         var items = list.querySelectorAll('li');
         var followingLi = null;
