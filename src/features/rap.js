@@ -23,7 +23,7 @@
     }
 
     function fixRapRow(doc, userId) {
-        if (!doc || !doc.body || doc.__nxRapDone) return;
+        if (!doc || !doc.body) return;
 
         var labels = doc.querySelectorAll('.details-info .text-label');
         var rapLabel = null;
@@ -41,23 +41,25 @@
         var valueEl = li.querySelector('.font-header-2');
         if (!valueEl) return;
 
+        if (valueEl.getAttribute('ng-bind')) valueEl.removeAttribute('ng-bind');
+        if (valueEl.getAttribute('data-ng-bind')) valueEl.removeAttribute('data-ng-bind');
+        if (valueEl.classList.contains('ng-binding')) valueEl.classList.remove('ng-binding');
+
         if (valueEl.dataset.nxRap === userId) return;
-        doc.__nxRapDone = userId;
+        valueEl.dataset.nxRap = userId;
 
         fetch('/users/' + userId + '/limiteds', { credentials: 'include' })
             .then(function(r) { return r.text(); })
             .then(function(html) {
                 var match = html.match(/Total RAP:[\s\S]{0,400}?([\d,]+)/i);
-                if (!match) { doc.__nxRapDone = null; return; }
+                if (!match) { delete valueEl.dataset.nxRap; return; }
                 var n = parseInt(match[1].replace(/,/g, ''), 10);
-                if (isNaN(n)) { doc.__nxRapDone = null; return; }
-
+                if (isNaN(n)) { delete valueEl.dataset.nxRap; return; }
                 valueEl.textContent = fmt(n);
                 valueEl.setAttribute('title', String(n));
-                valueEl.dataset.nxRap = userId;
             })
             .catch(function() {
-                doc.__nxRapDone = null;
+                delete valueEl.dataset.nxRap;
             });
     }
 
@@ -71,7 +73,7 @@
         for (var i = 0; i < frames.length; i++) {
             try {
                 var d = frames[i].contentDocument;
-                if (d) fixRapRow(d, id);
+                if (d && d.body) fixRapRow(d, id);
             } catch (e) {}
         }
     }
