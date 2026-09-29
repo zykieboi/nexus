@@ -1,6 +1,8 @@
 (function() {
     'use strict';
 
+    if (window.top !== window.self) return;
+
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
