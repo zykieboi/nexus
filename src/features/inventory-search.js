@@ -8,6 +8,10 @@
     var STYLE_ID = 'nx-inv-search-style';
     var TRY_LIMIT = 40;
 
+    function onBlockedPage() {
+        return /^\/catalog\/?$/.test(location.pathname);
+    }
+
     function style() {
         if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
@@ -68,6 +72,7 @@
 
     function build() {
         if (document.getElementById(WRAP_ID)) return true;
+        if (onBlockedPage()) return false;
 
         var container = findContainer();
         if (!container) return false;
@@ -98,6 +103,7 @@
 
     function scheduleRetry() {
         stopScanner();
+        if (onBlockedPage()) return;
         var tries = 0;
         scanner = setInterval(function() {
             tries++;
@@ -114,12 +120,14 @@
             var w = document.getElementById(WRAP_ID);
             if (w) w.remove();
 
+            if (onBlockedPage()) return;
             scheduleRetry();
         }, 800);
     }
 
     window.NX.features.inventorySearch = {
         apply: function() {
+            if (onBlockedPage()) return;
             if (document.getElementById(WRAP_ID)) return;
             style();
             if (build()) return;
