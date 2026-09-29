@@ -8,10 +8,13 @@
     var STYLE_ID = 'nx-inv-search-style';
     var TRY_LIMIT = 40;
 
-    function onBlockedPage() {
+    function isAllowedPage() {
         var path = location.pathname;
-        if (/^\/catalog\/?$/.test(path)) return true;
-        if (/^\/theme2020\/catalog\/?$/.test(path)) return true;
+        if (/^\/users\/\d+\/inventory(\/|$)/.test(path)) return true;
+        if (/^\/my\/avatar(\/|$)/.test(path)) return true;
+        if (/^\/theme2020\/users\/\d+\/inventory(\/|$)/.test(path)) return true;
+        if (/^\/theme2020\/avatar(\/|$)/.test(path)) return true;
+        if (/^\/theme2020\/inventory(\/|$)/.test(path)) return true;
         return false;
     }
 
@@ -82,7 +85,7 @@
 
     function build() {
         if (document.getElementById(WRAP_ID)) return true;
-        if (onBlockedPage()) return false;
+        if (!isAllowedPage()) return false;
 
         var container = findContainer();
         if (!container) return false;
@@ -113,7 +116,7 @@
 
     function scheduleRetry() {
         stopScanner();
-        if (onBlockedPage()) return;
+        if (!isAllowedPage()) return;
         var tries = 0;
         scanner = setInterval(function() {
             tries++;
@@ -129,14 +132,14 @@
 
             removeExisting();
 
-            if (onBlockedPage()) return;
+            if (!isAllowedPage()) return;
             scheduleRetry();
         }, 800);
     }
 
     window.NX.features.inventorySearch = {
         apply: function() {
-            if (onBlockedPage()) {
+            if (!isAllowedPage()) {
                 removeExisting();
                 return;
             }
