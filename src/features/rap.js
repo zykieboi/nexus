@@ -22,6 +22,24 @@
         return p.get('userId') || p.get('viewerId');
     }
 
+    function fetchRap(userId) {
+        var url = '/apisite/economy/v1/users/' + userId + '/assets/collectibles?limit=100';
+        return fetch(url, { credentials: 'include' })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                if (!d) return 0;
+                var items = d.data || d.items || d.assets || d.collectibles || [];
+                if (!Array.isArray(items)) items = [];
+                var sum = 0;
+                for (var i = 0; i < items.length; i++) {
+                    var v = items[i].recentAveragePrice || items[i].rap || items[i].price || 0;
+                    sum += Number(v) || 0;
+                }
+                return sum;
+            })
+            .catch(function() { return 0; });
+    }
+
     function addRapRow() {
         var userId = userFromUrl();
         if (!userId) return true;
@@ -29,7 +47,8 @@
         var list = document.querySelector('.details-info');
         if (!list) return false;
 
-        if (list.querySelector('.nx-rap-row')) return true;
+        var existing = list.querySelector('.nx-rap-row');
+        if (existing) return true;
 
         var items = list.querySelectorAll('li');
         var followingLi = null;
@@ -66,26 +85,17 @@
 
         list.appendChild(li);
 
-        fetch('/users/' + userId + '/limiteds', { credentials: 'include' })
-            .then(function(r) { return r.text(); })
-            .then(function(html) {
-                var m = html.match(/Total RAP:[\s\S]{0,400}?([\d,]+)/i);
-                if (!m) { if (span) span.textContent = '0'; return; }
-                var n = parseInt(m[1].replace(/,/g, ''), 10);
-                if (isNaN(n)) { if (span) span.textContent = '0'; return; }
-                if (span) {
-                    span.textContent = fmt(n);
-                    span.setAttribute('title', String(n));
-                }
-            })
-            .catch(function() { if (span) span.textContent = '0'; });
+        fetchRap(userId).then(function(total) {
+            if (!span) return;
+            span.textContent = fmt(total);
+            span.setAttribute('title', String(total));
+        });
 
         return true;
     }
 
     function start() {
         if (addRapRow()) return;
-
         var tries = 0;
         var iv = setInterval(function() {
             if (addRapRow() || ++tries > 120) clearInterval(iv);
