@@ -8,10 +8,10 @@
 
     var WRAP_ID = 'nx-inv-search-wrap';
     var STYLE_ID = 'nx-inv-search-style';
+    var TRY_LIMIT = 20;
 
     function style() {
-        var old = document.getElementById(STYLE_ID);
-        if (old) old.remove();
+        if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
@@ -57,10 +57,10 @@
     }
 
     function build() {
-        if (document.getElementById(WRAP_ID)) return;
+        if (document.getElementById(WRAP_ID)) return true;
 
         var container = findContainer();
-        if (!container) return;
+        if (!container) return false;
 
         var wrap = document.createElement('div');
         wrap.id = WRAP_ID;
@@ -74,25 +74,35 @@
 
         wrap.appendChild(input);
         container.parentNode.insertBefore(wrap, container);
+        return true;
     }
 
     var scanner = null;
 
+    function stopScanner() {
+        if (scanner) {
+            clearInterval(scanner);
+            scanner = null;
+        }
+    }
+
     window.NX.features.inventorySearch = {
         apply: function() {
-            style();
-            build();
+            if (document.getElementById(WRAP_ID)) return;
 
-            if (!scanner) {
-                scanner = setInterval(function() {
-                    if (document.getElementById(WRAP_ID)) return;
-                    style();
-                    build();
-                }, 1500);
-            }
+            style();
+
+            if (build()) return;
+
+            stopScanner();
+            var tries = 0;
+            scanner = setInterval(function() {
+                tries++;
+                if (build() || tries >= TRY_LIMIT) stopScanner();
+            }, 500);
         },
         teardown: function() {
-            if (scanner) { clearInterval(scanner); scanner = null; }
+            stopScanner();
             var w = document.getElementById(WRAP_ID);
             if (w) w.remove();
             var s = document.getElementById(STYLE_ID);
