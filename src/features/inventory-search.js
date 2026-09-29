@@ -1,6 +1,8 @@
 (function() {
     'use strict';
 
+    if (window.top !== window.self) return;
+
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
@@ -12,14 +14,23 @@
         var path = location.pathname;
         if (/^\/my\/avatar\/?$/.test(path)) return true;
         if (/^\/users\/\d+\/inventory\/?$/.test(path)) return true;
-        if (/^\/theme2020\/my\/avatar\/?$/.test(path)) return true;
-        if (/^\/theme2020\/users\/\d+\/inventory\/?$/.test(path)) return true;
         return false;
     }
 
-    function style() {
-        if (document.getElementById(STYLE_ID)) return;
-        var s = document.createElement('style');
+    function findContentIframe() {
+        var frames = document.querySelectorAll('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var src = frames[i].getAttribute('src') || '';
+            if (src.indexOf('/theme2020/chat') !== -1) continue;
+            if (src.indexOf('/theme2020/avatar') !== -1) return frames[i];
+            if (src.indexOf('/theme2020/inventory') !== -1) return frames[i];
+        }
+        return null;
+    }
+
+    function injectStyle(doc) {
+        if (doc.getElementById(STYLE_ID)) return;
+        var s = doc.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
             '#' + WRAP_ID + '{padding:10px 0;width:100%;}',
@@ -38,11 +49,11 @@
             '}',
             'html.octane-dark #' + WRAP_ID + ' input:focus{border-color:#0a84ff;}'
         ].join('');
-        (document.head || document.documentElement).appendChild(s);
+        (doc.head || doc.documentElement).appendChild(s);
     }
 
-    function findContainer() {
-        var cards = document.querySelectorAll('.item-card');
+    function findContainer(doc) {
+        var cards = doc.querySelectorAll('.item-card');
         if (!cards.length) return null;
 
         var parent = cards[0].parentElement;
@@ -63,9 +74,9 @@
         return cards[0].parentElement;
     }
 
-    function filter(query) {
+    function filter(doc, query) {
         var q = (query || '').toLowerCase().trim();
-        var cards = document.querySelectorAll('.item-card');
+        var cards = doc.querySelectorAll('.item-card');
         for (var i = 0; i < cards.length; i++) {
             var card = cards[i];
             var nameEl = card.querySelector('.item-card-name');
@@ -76,20 +87,34 @@
     }
 
     function build() {
-        if (document.getElementById(WRAP_ID)) return true;
         if (!onInventoryPage()) return false;
 
-        var container = findContainer();
+        var frame = findContentIframe();
+        if (!frame) return false;
+
+        var doc;
+        try {
+            doc = frame.contentDocument;
+        } catch (e) {
+            return false;
+        }
+        if (!doc || !doc.body) return false;
+
+        if (doc.getElementById(WRAP_ID)) return true;
+
+        var container = findContainer(doc);
         if (!container) return false;
 
-        var wrap = document.createElement('div');
+        injectStyle(doc);
+
+        var wrap = doc.createElement('div');
         wrap.id = WRAP_ID;
 
-        var input = document.createElement('input');
+        var input = doc.createElement('input');
         input.type = 'text';
         input.placeholder = 'Search inventory\u2026';
         input.addEventListener('input', function() {
-            filter(input.value);
+            filter(doc, input.value);
         });
 
         wrap.appendChild(input);
@@ -121,10 +146,6 @@
         setInterval(function() {
             if (location.href === last) return;
             last = location.href;
-
-            var w = document.getElementById(WRAP_ID);
-            if (w) w.remove();
-
             if (onInventoryPage()) scheduleRetry();
         }, 800);
     }
@@ -132,18 +153,22 @@
     window.NX.features.inventorySearch = {
         apply: function() {
             if (!onInventoryPage()) return;
-            if (document.getElementById(WRAP_ID)) return;
-            style();
             if (build()) return;
             scheduleRetry();
         },
         teardown: function() {
             stopScanner();
-            var w = document.getElementById(WRAP_ID);
+            var frame = findContentIframe();
+            if (!frame) return;
+            var doc;
+            try { doc = frame.contentDocument; } catch (e) { return; }
+            if (!doc) return;
+
+            var w = doc.getElementById(WRAP_ID);
             if (w) w.remove();
-            var s = document.getElementById(STYLE_ID);
+            var s = doc.getElementById(STYLE_ID);
             if (s) s.remove();
-            var cards = document.querySelectorAll('.item-card');
+            var cards = doc.querySelectorAll('.item-card');
             for (var i = 0; i < cards.length; i++) cards[i].style.display = '';
         }
     };
