@@ -9,7 +9,17 @@
     var TRY_LIMIT = 40;
 
     function onBlockedPage() {
-        return /^\/catalog\/?$/.test(location.pathname);
+        var path = location.pathname;
+        if (/^\/catalog\/?$/.test(path)) return true;
+        if (/^\/theme2020\/catalog\/?$/.test(path)) return true;
+        return false;
+    }
+
+    function removeExisting() {
+        var existing = document.getElementById(WRAP_ID);
+        if (existing) existing.remove();
+        var style = document.getElementById(STYLE_ID);
+        if (style) style.remove();
     }
 
     function style() {
@@ -117,8 +127,7 @@
             if (location.href === last) return;
             last = location.href;
 
-            var w = document.getElementById(WRAP_ID);
-            if (w) w.remove();
+            removeExisting();
 
             if (onBlockedPage()) return;
             scheduleRetry();
@@ -127,7 +136,10 @@
 
     window.NX.features.inventorySearch = {
         apply: function() {
-            if (onBlockedPage()) return;
+            if (onBlockedPage()) {
+                removeExisting();
+                return;
+            }
             if (document.getElementById(WRAP_ID)) return;
             style();
             if (build()) return;
@@ -135,10 +147,7 @@
         },
         teardown: function() {
             stopScanner();
-            var w = document.getElementById(WRAP_ID);
-            if (w) w.remove();
-            var s = document.getElementById(STYLE_ID);
-            if (s) s.remove();
+            removeExisting();
             var cards = document.querySelectorAll('.item-card');
             for (var i = 0; i < cards.length; i++) cards[i].style.display = '';
         }
