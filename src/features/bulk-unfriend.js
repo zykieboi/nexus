@@ -67,10 +67,10 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:absolute;left:0;right:0;',
-            'display:flex;align-items:center;gap:12px;padding:0 16px;height:48px;',
-            'background:transparent;font-family:inherit;font-size:14px;',
-            'z-index:5;box-sizing:border-box;pointer-events:none;}',
+            '#' + PANEL_ID + '{position:absolute;',
+            'display:inline-flex;align-items:center;gap:12px;padding:0;',
+            'font-family:inherit;font-size:14px;z-index:5;box-sizing:border-box;',
+            'pointer-events:none;}',
             '#' + PANEL_ID + ' > *{pointer-events:auto;}',
             '#' + PANEL_ID + ' .count{color:#6a6d70;font-size:13px;}',
             '#' + PANEL_ID + ' button{padding:6px 14px;font-size:13px;border-radius:4px;',
@@ -113,9 +113,17 @@
         style();
         main.style.position = 'relative';
 
+        var dpr = window.devicePixelRatio || 1;
+        var leftPct = 18 + (1 - dpr) * 35;
+        if (leftPct < 10) leftPct = 10;
+        if (leftPct > 40) leftPct = 40;
+
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
-        panel.style.top = '155px';
+        panel.style.top = '190px';
+        panel.style.left = leftPct + '%';
+        panel.style.right = 'auto';
+        panel.style.width = 'fit-content';
 
         var selectAll = document.createElement('button');
         selectAll.textContent = 'Select All';
