@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.1
+// @version      1.0.7.2
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,20 +16,18 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/panel.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/admin/gate.js?v=4
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=4
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-background.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=5
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -245,7 +243,10 @@
         if (document.hidden) clearInterval(burst);
     });
 
+    var booted = false;
     function boot() {
+        if (booted) return;
+        booted = true;
         refreshRole().then(function () {
             applyAll();
             tick();
