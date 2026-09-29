@@ -5,8 +5,10 @@
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
+// @match        https://octane.wtf/theme2020/*
 // @match        https://octane.wtf/*
 // @match        https://*.octane.wtf/*
+// @match        https://*.octane.wtf/theme2020/*
 // @grant        GM_setValue
 // @grant        GM_getValue
 // @grant        GM_addStyle
