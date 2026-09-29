@@ -1,14 +1,21 @@
 (function() {
     'use strict';
 
-    if (window.top === window.self) return;
-
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
     var WRAP_ID = 'nx-inv-search-wrap';
     var STYLE_ID = 'nx-inv-search-style';
     var TRY_LIMIT = 20;
+
+    function onInventoryPage() {
+        var path = location.pathname;
+        if (/^\/my\/avatar\/?$/.test(path)) return true;
+        if (/^\/users\/\d+\/inventory\/?$/.test(path)) return true;
+        if (/^\/theme2020\/my\/avatar\/?$/.test(path)) return true;
+        if (/^\/theme2020\/users\/\d+\/inventory\/?$/.test(path)) return true;
+        return false;
+    }
 
     function style() {
         if (document.getElementById(STYLE_ID)) return;
@@ -37,11 +44,23 @@
     function findContainer() {
         var cards = document.querySelectorAll('.item-card');
         if (!cards.length) return null;
+
         var parent = cards[0].parentElement;
-        while (parent && !parent.classList.contains('item-cards') && !parent.classList.contains('hlist')) {
+        var depth = 0;
+        while (parent && depth < 6) {
+            var cls = parent.className || '';
+            if (
+                cls.indexOf('item-cards') !== -1 ||
+                cls.indexOf('hlist') !== -1 ||
+                cls.indexOf('grid') !== -1 ||
+                cls.indexOf('items-') !== -1
+            ) {
+                return parent;
+            }
             parent = parent.parentElement;
+            depth++;
         }
-        return parent || cards[0].parentElement;
+        return cards[0].parentElement;
     }
 
     function filter(query) {
@@ -58,6 +77,7 @@
 
     function build() {
         if (document.getElementById(WRAP_ID)) return true;
+        if (!onInventoryPage()) return false;
 
         var container = findContainer();
         if (!container) return false;
@@ -86,20 +106,36 @@
         }
     }
 
+    function scheduleRetry() {
+        stopScanner();
+        if (!onInventoryPage()) return;
+        var tries = 0;
+        scanner = setInterval(function() {
+            tries++;
+            if (build() || tries >= TRY_LIMIT) stopScanner();
+        }, 500);
+    }
+
+    function watchNavigation() {
+        var last = location.href;
+        setInterval(function() {
+            if (location.href === last) return;
+            last = location.href;
+
+            var w = document.getElementById(WRAP_ID);
+            if (w) w.remove();
+
+            if (onInventoryPage()) scheduleRetry();
+        }, 800);
+    }
+
     window.NX.features.inventorySearch = {
         apply: function() {
+            if (!onInventoryPage()) return;
             if (document.getElementById(WRAP_ID)) return;
-
             style();
-
             if (build()) return;
-
-            stopScanner();
-            var tries = 0;
-            scanner = setInterval(function() {
-                tries++;
-                if (build() || tries >= TRY_LIMIT) stopScanner();
-            }, 500);
+            scheduleRetry();
         },
         teardown: function() {
             stopScanner();
@@ -111,4 +147,9 @@
             for (var i = 0; i < cards.length; i++) cards[i].style.display = '';
         }
     };
+
+    if (!window.nxInvSearchNavBound) {
+        window.nxInvSearchNavBound = true;
+        watchNavigation();
+    }
 })();
