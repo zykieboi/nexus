@@ -179,11 +179,6 @@
                 cat: 'visual', label: 'Custom Logo',
                 desc: 'Replace the navbar logo with your own image.'
             },
-            nexusPanel: {
-                cat: 'visual', label: 'Nexus Panel',
-                desc: 'Enables the admin panel.',
-                devOnly: true
-            },
             inventorySearch: {
                 cat: 'function', label: 'Inventory Search',
                 desc: 'Adds a search bar to your inventory.'
