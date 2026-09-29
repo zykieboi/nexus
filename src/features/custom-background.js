@@ -10,6 +10,7 @@
     var PANEL_ID = 'nx-bg-panel';
     var CSS_ID = 'nx-bg-panel-style';
     var TRANS_ID = 'nx-bg-transparent';
+    var IFRAME_STYLE_ID = 'nx-bg-transparent-iframe';
 
     var K = {
         url: 'nx_bg_url',
@@ -29,6 +30,7 @@
 
     var hidden = false;
     var watch = null;
+    var cardWatch = null;
 
     function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
@@ -164,34 +166,31 @@
         paintOverlay();
     }
 
-    // --- NEW: reach into same-origin iframes (theme2020/home, theme2020/chat)
-    //     and strip their own backgrounds too. Without this, those iframes
-    //     paint solid rectangles over the top of our background layer.
-    function makeIframesTransparent() {
-        var iframes = document.querySelectorAll('iframe');
-        iframes.forEach(function(frame) {
-            try {
-                var doc = frame.contentDocument;
-                if (!doc || !doc.head) return;
+    function buildCardRules(isDark) {
+        var cardBackground = isDark
+            ? 'rgba(35,37,39,0.85)'
+            : 'rgba(255,255,255,0.85)';
+        var cardBorder = isDark
+            ? 'rgba(90,93,96,0.6)'
+            : 'rgba(199,203,206,0.6)';
 
-                var styleId = 'nx-bg-transparent-iframe';
-                var existing = doc.getElementById(styleId);
-                if (existing) existing.remove();
+        return [
+            '[class*="card-0-2-"],[class*="card-"],',
+            '[class*="tile-0-2-"],[class*="gameCard"],[class*="game-card"],',
+            '[class*="itemCard"],[class*="item-card"],',
+            '[class*="profileCard"],[class*="profile-card"],',
+            '[class*="section-0-2-"],[class*="panel-0-2-"],',
+            '[class*="container-0-2-"]',
+            '{background:' + cardBackground + ' !important;',
+            'backdrop-filter:blur(6px) !important;',
+            '-webkit-backdrop-filter:blur(6px) !important;',
+            'border-radius:8px;}',
 
-                var style = doc.createElement('style');
-                style.id = styleId;
-                style.textContent = [
-                    'html,body{background:transparent !important;}',
-                    'body{color-scheme:dark;}',
-                    '.container-main,.content,.section-content,.main-content{background:transparent !important;}',
-                    '[class*="card-0-2-"]{background:rgba(35,37,39,0.85) !important;backdrop-filter:blur(6px);}',
-                    'html.octane-dark body{background:transparent !important;}'
-                ].join('');
-                doc.head.appendChild(style);
-            } catch (e) {
-                // Cross-origin iframe — nothing we can do here, skip it.
-            }
-        });
+            '.alertBg-0-2-1,.alertBg-d0-0-2-5,[class*="alertBg-"]{',
+            'backdrop-filter:none !important;',
+            '-webkit-backdrop-filter:none !important;',
+            'border-radius:0 !important;}'
+        ].join('');
     }
 
     function pageTransparent() {
@@ -199,42 +198,30 @@
         if (existing) existing.remove();
 
         var isDark = dark();
-        var cardBackground = isDark
-            ? 'rgba(35,37,39,0.85)'
-            : 'rgba(255,255,255,0.85)';
 
         var style = document.createElement('style');
         style.id = TRANS_ID;
         style.textContent = [
-            // Base page
             'html,body{background:transparent !important;}',
 
-            // Main content wrapper around the iframe / cards
-            '.main-0-2-8,.main-0-2-45,[class*="main-0-2-"]{background:transparent !important;}',
-
-            // The dark-mode overlay Octane slaps over content
             '.octane-nav-offset{background:transparent !important;}',
-            'html.octane-dark .octane-nav-offset{background:transparent !important;}',
-            'html.octane-dark .octane-nav-offset .bg-white{background:transparent !important;}',
+            '[class*="main-0-2-"]{background:transparent !important;}',
 
-            // Top announcement / alert bar
-            '.alertBg-0-2-1,.alertBg-d0-0-2-5,[class*="alertBg-"]{background:transparent !important;}',
-            '.fakeAlert-0-2-4{background:transparent !important;}',
+            '[class*="main-0-2-"] iframe,.octane-nav-offset iframe{background:transparent !important;}',
 
-            // Iframe elements themselves — the document inside gets its own
-            // style injected by makeIframesTransparent().
-            '.main-0-2-8 iframe,.octane-nav-offset iframe{background:transparent !important;}',
+            buildCardRules(isDark),
 
-            // Cards keep a soft backdrop so text stays readable
-            '[class*="card-0-2-"]{background:' + cardBackground + ' !important;backdrop-filter:blur(6px);}'
+            '.navbar-header,.navbar-brand,.octane-logo,',
+            '.rbx-header,#header,#left-navigation-container,',
+            '.rbx-left-col,.footer-0-2-55,footer,',
+            '#nx-bg-panel,#nx-logo-panel{',
+            'background:inherit !important;backdrop-filter:none !important;}'
         ].join('');
 
         document.head.appendChild(style);
 
-        // Now reach into the iframes.
         makeIframesTransparent();
 
-        // If they load lazily, try again after the fact.
         document.querySelectorAll('iframe').forEach(function(frame) {
             if (!frame.dataset.nxBgBound) {
                 frame.dataset.nxBgBound = '1';
@@ -244,7 +231,6 @@
             }
         });
 
-        // Rebuild stylesheet when the theme flips, so card colors update.
         if (!document.body.dataset.nxBgThemeWatch) {
             document.body.dataset.nxBgThemeWatch = '1';
             window.addEventListener('octane-theme-change', function() {
@@ -256,18 +242,44 @@
         }
     }
 
+    function makeIframesTransparent() {
+        var iframes = document.querySelectorAll('iframe');
+        iframes.forEach(function(frame) {
+            var src = frame.getAttribute('src') || '';
+            if (src.indexOf('/theme2020/chat') !== -1) return;
+
+            try {
+                var doc = frame.contentDocument;
+                if (!doc || !doc.head) return;
+
+                var existing = doc.getElementById(IFRAME_STYLE_ID);
+                if (existing) existing.remove();
+
+                var isDark = dark();
+
+                var style = doc.createElement('style');
+                style.id = IFRAME_STYLE_ID;
+                style.textContent = [
+                    'html,body{background:transparent !important;}',
+                    buildCardRules(isDark)
+                ].join('');
+
+                doc.head.appendChild(style);
+            } catch (e) {}
+        });
+    }
+
     function removeTransparent() {
         var s = document.getElementById(TRANS_ID);
         if (s) s.remove();
 
-        // Also clean up the iframe-side styles we injected.
         document.querySelectorAll('iframe').forEach(function(frame) {
             try {
                 var doc = frame.contentDocument;
                 if (!doc) return;
-                var style = doc.getElementById('nx-bg-transparent-iframe');
+                var style = doc.getElementById(IFRAME_STYLE_ID);
                 if (style) style.remove();
-            } catch (e) { /* cross-origin, skip */ }
+            } catch (e) {}
         });
     }
 
@@ -664,8 +676,10 @@
                     pageTransparent();
                     buildLayer();
                 }
-                // New page => new iframes => re-strip their backgrounds.
-                if (url()) makeIframesTransparent();
+                if (url()) {
+                    pageTransparent();
+                    makeIframesTransparent();
+                }
                 if (!document.getElementById(PANEL_ID) && !hidden) buildPanel();
             }
         }, 400);
@@ -678,6 +692,32 @@
         }
     }
 
+    function startCardWatch() {
+        if (cardWatch) clearInterval(cardWatch);
+        cardWatch = setInterval(function() {
+            if (!url()) return;
+            var iframes = document.querySelectorAll('iframe');
+            for (var i = 0; i < iframes.length; i++) {
+                var src = iframes[i].getAttribute('src') || '';
+                if (src.indexOf('/theme2020/chat') !== -1) continue;
+                try {
+                    var doc = iframes[i].contentDocument;
+                    if (doc && doc.head && !doc.getElementById(IFRAME_STYLE_ID)) {
+                        makeIframesTransparent();
+                        break;
+                    }
+                } catch (e) {}
+            }
+        }, 2000);
+    }
+
+    function stopCardWatch() {
+        if (cardWatch) {
+            clearInterval(cardWatch);
+            cardWatch = null;
+        }
+    }
+
     window.NX.features.customBackground = {
         apply: function() {
             hidden = false;
@@ -687,9 +727,11 @@
             }
             if (!document.getElementById(PANEL_ID)) buildPanel();
             startWatch();
+            startCardWatch();
         },
         teardown: function() {
             stopWatch();
+            stopCardWatch();
             var l = layer();
             if (l) l.remove();
             var o = document.getElementById('nx-bg-overlay');
