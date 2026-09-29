@@ -43,12 +43,38 @@
     }
     function minimized() { return GM_getValue(PMIN_KEY, false) === true; }
 
+    // --- FIXED: target the real Octane logo markup ---
     function logoEls() {
         var list = [];
-        var d = document.querySelector('.imgDesktop-0-2-12, [class*="imgDesktop-0-2-"]');
-        if (d) list.push({ el: d, kind: 'desktop' });
-        var m = document.querySelector('.imgMobile-0-2-13, [class*="imgMobile-0-2-"]');
-        if (m) list.push({ el: m, kind: 'mobile' });
+        var seen = [];
+
+        // <span class="octane-logo"></span> inside <a class="navbar-brand">
+        // There may be multiple .navbar-header instances (sticky + static).
+        var spans = document.querySelectorAll('.octane-logo');
+        spans.forEach(function (el) {
+            if (seen.indexOf(el) === -1) {
+                seen.push(el);
+                list.push({ el: el, kind: 'span' });
+            }
+        });
+
+        var brands = document.querySelectorAll('.navbar-brand');
+        brands.forEach(function (brand) {
+            var cs = getComputedStyle(brand);
+            if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+                if (seen.indexOf(brand) === -1) {
+                    seen.push(brand);
+                    list.push({ el: brand, kind: 'brand' });
+                }
+            }
+            brand.querySelectorAll('img').forEach(function (img) {
+                if (seen.indexOf(img) === -1) {
+                    seen.push(img);
+                    list.push({ el: img, kind: 'img' });
+                }
+            });
+        });
+
         return list;
     }
 
@@ -67,15 +93,29 @@
         img.src = u;
     }
 
-    function restore(el) {
-        el.style.backgroundImage = '';
-        el.style.backgroundSize = '';
-        el.style.backgroundRepeat = '';
-        el.style.backgroundPosition = '';
-        el.style.width = '';
-        el.style.height = '';
-        el.style.minWidth = '';
-        el.style.display = '';
+    // --- FIXED: handle span/brand (bg-image) and img (src) ---
+    function restore(entry) {
+        var el = entry.el;
+        if (entry.kind === 'img') {
+            if (el.dataset.nxOrigSrc) {
+                el.src = el.dataset.nxOrigSrc;
+            }
+            el.style.removeProperty('width');
+            el.style.removeProperty('height');
+            el.style.removeProperty('min-width');
+            el.style.removeProperty('object-fit');
+            el.dataset.nxCustomLogo = '';
+            el.dataset.nxLogoUrl = '';
+            return;
+        }
+        el.style.removeProperty('background-image');
+        el.style.removeProperty('background-size');
+        el.style.removeProperty('background-repeat');
+        el.style.removeProperty('background-position');
+        el.style.removeProperty('width');
+        el.style.removeProperty('height');
+        el.style.removeProperty('min-width');
+        el.style.removeProperty('display');
         el.dataset.nxCustomLogo = '';
         el.dataset.nxLogoUrl = '';
     }
@@ -83,23 +123,35 @@
     function paint(entry, u, dims) {
         var el = entry.el;
         var h = getHeight();
-        var aspect = dims.w && dims.h ? dims.w / dims.h : (entry.kind === 'desktop' ? 118 / 30 : 1);
+        var aspect = dims.w && dims.h ? dims.w / dims.h : (118 / 30);
         var w = Math.round(h * aspect);
 
-        el.style.backgroundImage = 'url("' + u + '")';
-        el.style.backgroundSize = 'contain';
-        el.style.backgroundRepeat = 'no-repeat';
-        el.style.backgroundPosition = 'center';
-        el.style.height = h + 'px';
-        el.style.width = w + 'px';
-        el.style.minWidth = w + 'px';
+        if (entry.kind === 'img') {
+            if (!el.dataset.nxOrigSrc) {
+                el.dataset.nxOrigSrc = el.getAttribute('src') || '';
+            }
+            el.src = u;
+            el.style.setProperty('width', w + 'px', 'important');
+            el.style.setProperty('height', h + 'px', 'important');
+            el.style.setProperty('min-width', w + 'px', 'important');
+            el.style.setProperty('object-fit', 'contain', 'important');
+            el.dataset.nxCustomLogo = '1';
+            el.dataset.nxLogoUrl = u;
+            return;
+        }
+
+        el.style.setProperty('background-image', 'url("' + u + '")', 'important');
+        el.style.setProperty('background-size', 'contain', 'important');
+        el.style.setProperty('background-repeat', 'no-repeat', 'important');
+        el.style.setProperty('background-position', 'center', 'important');
+        el.style.setProperty('height', h + 'px', 'important');
+        el.style.setProperty('width', w + 'px', 'important');
+        el.style.setProperty('min-width', w + 'px', 'important');
 
         el.dataset.nxCustomLogo = '1';
         el.dataset.nxLogoUrl = u;
     }
 
-    // Renamed from the old shadowed `apply()` so it's obvious this is the
-    // "paint the logos" routine, not the feature's public entry point.
     function paintLogos() {
         var u = getUrl();
         var els = logoEls();
@@ -108,7 +160,7 @@
         els.forEach(function(entry) {
             var el = entry.el;
             if (!u) {
-                if (el.dataset.nxCustomLogo === '1') restore(el);
+                if (el.dataset.nxCustomLogo === '1') restore(entry);
                 return;
             }
             if (el.dataset.nxCustomLogo === '1' && el.dataset.nxLogoUrl === u) return;
@@ -241,7 +293,6 @@
 
     function buildPanel() {
         if (hidden) return;
-        // purge ALL panels with this id (in case of orphans from a previous build)
         removeAllPanels();
         panelStyle();
 
@@ -349,7 +400,7 @@
         clearBtn.onclick = function() {
             GM_setValue(URL_KEY, '');
             input.value = '';
-            logoEls().forEach(function(entry) { restore(entry.el); });
+            logoEls().forEach(function(entry) { restore(entry); });
         };
 
         btns.appendChild(applyBtn);
@@ -412,7 +463,7 @@
         },
         teardown: function() {
             stopTimers();
-            logoEls().forEach(function(entry) { restore(entry.el); });
+            logoEls().forEach(function(entry) { restore(entry); });
             removeAllPanels();
             var s = document.getElementById(CSS_ID);
             if (s) s.remove();
