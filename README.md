@@ -8,7 +8,7 @@
 
 </div>
 
-<h2>Privacy</h2>
+<h2>Privacy (useless)</h2>
 
 <p>Nexus doesn't grab your tokens like the personal ones you use for Octane. Every token is generated in your own browser, stored in Tampermonkey, and only ever sent to the Nexus, the userscript's @connect line blocks every other domain. <strong>The Worker stores your own Aisaka ID, Username and Timestamps, nothing else. No cookies, no .ROBLOSECURITY, no IP, no site data</strong>. Nexus tokens aren't <strong>tied</strong> to Aisaka's login, so nobody can use one to <strong>access</strong> your account.</p>
 
