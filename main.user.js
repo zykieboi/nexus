@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.3
+// @version      1.0.7.4
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -26,7 +26,8 @@
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=5
 // @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=5
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/oldroblox.js?v=1
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=6
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -192,6 +193,7 @@
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
+        if (s.get('roblox2019') && f.roblox2019) f.roblox2019.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (f.announcement) f.announcement.apply();
     }
