@@ -169,7 +169,7 @@
         var opts = {
             roblox2019: {
                 cat: 'visual', label: 'Roblox 2019L Theme',
-                desc: 'Restyles Octane to look like Roblox 2019 (navbar logo, favicon, title).'
+                desc: 'Makes Octane to look like Roblox back in 2019.'
             },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
