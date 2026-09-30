@@ -25,6 +25,7 @@
 </p>
 
 <h2>Credits</h2>
+<p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
 
 <p>Built by <a href="https://github.com/zykieboi">zykieboi</a>.</p>
 
