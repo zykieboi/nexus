@@ -1,5 +1,5 @@
 'use strict';
-// because why not
+
 const fs = require('fs');
 const path = require('path');
 
@@ -34,18 +34,14 @@ function stripSourceMap(code) {
     return code.replace(/\n?\/\/# sourceMappingURL=.*$/mg, '');
 }
 
-function main() {
-    const parts = [];
-    for (const rel of FILES) {
-        parts.push('/* ' + rel + ' */\n' + stripSourceMap(read(rel)).trim());
-    }
-    const out = parts.join('\n\n') + '\n';
-
-    fs.mkdirSync(path.dirname(OUT), { recursive: true });
-    fs.writeFileSync(OUT, out, 'utf8');
-
-    const kb = (Buffer.byteLength(out, 'utf8') / 1024).toFixed(1);
-    console.log('built ' + path.relative(ROOT, OUT) + ' (' + kb + ' KB, ' + FILES.length + ' files)');
+const parts = [];
+for (const rel of FILES) {
+    parts.push('/* ' + rel + ' */\n' + stripSourceMap(read(rel)).trim());
 }
+const out = parts.join('\n\n') + '\n';
 
-main();
+fs.mkdirSync(path.dirname(OUT), { recursive: true });
+fs.writeFileSync(OUT, out, 'utf8');
+
+const kb = (Buffer.byteLength(out, 'utf8') / 1024).toFixed(1);
+console.log('built build/bundle.js (' + kb + ' KB, ' + FILES.length + ' files)');
