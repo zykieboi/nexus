@@ -245,9 +245,9 @@
                         var f = window.NX.features[k];
                         if (!f) return;
                         if (this.checked) {
-                            if (typeof f.apply === 'features') f.apply();
+                            if (typeof f.apply === 'function') f.apply();
                         } else {
-                            if (typeof f.teardown === 'features') f.teardown();
+                            if (typeof f.teardown === 'function') f.teardown();
                         }
                     };
                 })(key));
