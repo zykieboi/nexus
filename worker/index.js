@@ -5,8 +5,21 @@ function json(obj, status, cors) {
     });
 }
 
+const USER_COUNT_KEY = 'user_count';
+const SEEN_TTL = 60 * 60 * 24;
+
+async function trackUser(env, id) {
+    if (!id) return;
+    const dayKey = 'seen:' + id;
+    const already = await env.NEXUS_KV.get(dayKey);
+    if (already) return;
+    await env.NEXUS_KV.put(dayKey, '1', { expirationTtl: SEEN_TTL });
+    const n = parseInt(await env.NEXUS_KV.get(USER_COUNT_KEY) || '0', 10);
+    await env.NEXUS_KV.put(USER_COUNT_KEY, String(n + 1));
+}
+
 export default {
-    async fetch(request, env) {
+    async fetch(request, env, ctx) {
         const url = new URL(request.url);
         const origin = request.headers.get('Origin') || '';
         const allowedOrigins = [
@@ -25,6 +38,17 @@ export default {
 
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: cors });
+        }
+
+        if (url.pathname === '/api/nexus/ping') {
+            const id = url.searchParams.get('id');
+            ctx.waitUntil(trackUser(env, id));
+            return json({ ok: true }, 200, cors);
+        }
+
+        if (url.pathname === '/api/nexus/count') {
+            const n = parseInt(await env.NEXUS_KV.get(USER_COUNT_KEY) || '0', 10);
+            return json({ count: n }, 200, cors);
         }
 
         const token = request.headers.get('x-nexus-token');
