@@ -26,7 +26,7 @@
 
 <h2>test out in-coming features</h2>
 
-if u lwk wanna test new features (some are buggy click <a href="https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js">here</a>)
+if u lwk wanna test new features (some are buggy, will be releasing more, click <a href="https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js">here</a>)
 
 <h2>Credits</h2>
 <p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
