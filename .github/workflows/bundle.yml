@@ -4,8 +4,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'build/**'
-      - 'bundle.js'
+      - 'src/**'
+      - 'build.js'
       - '.github/workflows/bundle.yml'
   workflow_dispatch:
 
@@ -25,7 +25,7 @@ jobs:
           node-version: '20'
 
       - name: Build bundle
-        run: node bundle.js
+        run: node build.js
 
       - name: Commit bundle
         run: |
