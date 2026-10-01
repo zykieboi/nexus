@@ -31,8 +31,8 @@ if u lwk wanna test new features (some are buggy, will be releasing more, click 
 <h2>Credits</h2>
 <p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
 
-<p>Built by <a href="https://github.com/zykieboi">zykieboi</a>.</p>
+<p>Built by <a href="https://github.com/zykieboi">Zyk</a>.</p>
 
 <a href="https://discord.com/users/1415706751415750819">
-  <img src="https://cdn.discordapp.com/avatars/1415706751415750819/44174724015cd0cd18aa2d4b7aa10deb.png?size=1024" width="80" style="border-radius:50%">
+  <img src="https://images-ext-1.discordapp.net/external/OAzOL3Hw84LuBIpsKwf7UqloFRW2a4ridhNsj9Lo4LM/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/1415706751415750819/72bc51bc81f6aefa4f5fbdb5ad4f25eb.png?format=webp&quality=lossless&width=640&height=80" width="75" style="border-radius:75%"> <p>me</p>
 </a>
