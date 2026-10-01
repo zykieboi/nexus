@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.4
+// @version      1.0.7.5
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,18 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/settings.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/csrf.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/core/server.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/remove-ads.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/hide-alert.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/rap.js?v=67
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/inventory-search.js?v=7
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/bulk-unfriend.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/announcement.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/custom-logo.js?v=5
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/features/oldroblox.js?v=1
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/src/ui/modal.js?v=6
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=1
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
