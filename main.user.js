@@ -183,6 +183,7 @@
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
         if (s.get('roblox2019') && f.roblox2019) f.roblox2019.apply();
+        if (s.get('hideChat') && f.hideChat) f.hideChat.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (f.announcement) f.announcement.apply();
     }
