@@ -55,11 +55,22 @@
         '.rbx-header .rbx-navbar-icon-group .buy-robux-link-container .new-item-pill.small{background-color:#f90707;color:#fff}'
     ].join('');
 
+    var originalFaviconHref = null;
+    var originalFaviconType = null;
+    var createdFaviconLink = false;
+
+    var titleDesc = null;
+    var titlePatched = false;
+    try {
+        titleDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'title')
+            || Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'title');
+    } catch (e) {}
+
     var titleObserver = null;
     var bodyObserver = null;
-    var titlePatched = false;
-    var origTitleDesc = null;
-    var loaded = false;
+    var headObserver = null;
+    var globalObserver = null;
+    var historyWrapped = false;
 
     function injectCSS() {
         if (document.getElementById(CSS_ID)) return;
@@ -77,6 +88,10 @@
     function setFavicon() {
         var link = document.querySelector('link[rel="icon"]');
         if (link) {
+            if (originalFaviconHref === null) {
+                originalFaviconHref = link.getAttribute('href');
+                originalFaviconType = link.getAttribute('type');
+            }
             if (link.getAttribute('href') !== FAVICON) {
                 link.setAttribute('href', FAVICON);
                 link.setAttribute('type', 'image/png');
@@ -88,35 +103,44 @@
         link.type = 'image/png';
         link.href = FAVICON;
         (document.head || document.documentElement).appendChild(link);
+        createdFaviconLink = true;
     }
 
-    function swapText(text) {
-        return text ? text.replace(/Octane/g, 'ROBLOX') : text;
+    function restoreFavicon() {
+        var link = document.querySelector('link[rel="icon"]');
+        if (!link) return;
+        if (createdFaviconLink) {
+            link.remove();
+            return;
+        }
+        if (originalFaviconHref !== null) link.setAttribute('href', originalFaviconHref);
+        if (originalFaviconType !== null) link.setAttribute('type', originalFaviconType);
+        else link.removeAttribute('type');
+    }
+
+    function swapText(t) {
+        return t ? t.replace(/Octane/g, 'ROBLOX') : t;
+    }
+
+    function unswapText(t) {
+        return t ? t.replace(/ROBLOX/g, 'Octane') : t;
     }
 
     function patchTitle() {
-        if (titlePatched) return;
+        if (titlePatched || !titleDesc || !titleDesc.set) return;
         try {
-            origTitleDesc = Object.getOwnPropertyDescriptor(Document.prototype, 'title')
-                || Object.getOwnPropertyDescriptor(HTMLDocument.prototype, 'title');
-            if (origTitleDesc && origTitleDesc.set) {
-                Object.defineProperty(document, 'title', {
-                    configurable: true,
-                    get: function () { return origTitleDesc.get.call(document); },
-                    set: function (v) { origTitleDesc.set.call(document, swapText(v)); }
-                });
-                titlePatched = true;
-            }
+            Object.defineProperty(document, 'title', {
+                configurable: true,
+                get: function () { return titleDesc.get.call(document); },
+                set: function (v) { titleDesc.set.call(document, swapText(v)); }
+            });
+            titlePatched = true;
         } catch (e) {}
     }
 
     function unpatchTitle() {
-        if (!titlePatched) return;
-        try {
-            if (origTitleDesc) {
-                Object.defineProperty(document, 'title', origTitleDesc);
-            }
-        } catch (e) {}
+        if (!titlePatched || !titleDesc) return;
+        try { Object.defineProperty(document, 'title', titleDesc); } catch (e) {}
         titlePatched = false;
     }
 
@@ -125,6 +149,13 @@
         var t = el.textContent;
         if (!t || t.indexOf('Octane') === -1) return;
         el.textContent = swapText(t);
+    }
+
+    function unfixTitleEl(el) {
+        if (!el) return;
+        var t = el.textContent;
+        if (!t || t.indexOf('ROBLOX') === -1) return;
+        el.textContent = unswapText(t);
     }
 
     function watchTitle() {
@@ -156,22 +187,36 @@
         for (var i = 0, l = kids.length; i < l; i++) walk(kids[i]);
     }
 
-    function onBodyMutations(mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-            var m = mutations[i];
-            if (m.type === 'characterData') { fixTextNode(m.target); continue; }
-            var added = m.addedNodes;
-            for (var j = 0; j < added.length; j++) {
-                var n = added[j];
-                if (n.nodeType === 3) fixTextNode(n);
-                else if (n.nodeType === 1) walk(n);
-            }
+    function unwalk(node) {
+        if (node.nodeType === 3) {
+            var v = node.nodeValue;
+            if (v && v.indexOf('ROBLOX') !== -1) node.nodeValue = unswapText(v);
+            return;
         }
+        if (node.nodeType !== 1) return;
+        var tag = node.tagName;
+        if (tag === 'IFRAME' || tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TITLE') return;
+        var kids = node.childNodes;
+        for (var i = 0, l = kids.length; i < l; i++) unwalk(kids[i]);
     }
 
     function startBodyObserver() {
         if (!document.body || bodyObserver) return;
-        bodyObserver = new MutationObserver(onBodyMutations);
+        bodyObserver = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var m = mutations[i];
+                if (m.type === 'characterData') {
+                    fixTextNode(m.target);
+                    continue;
+                }
+                var added = m.addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                    var n = added[j];
+                    if (n.nodeType === 3) fixTextNode(n);
+                    else if (n.nodeType === 1) walk(n);
+                }
+            }
+        });
         bodyObserver.observe(document.body, {
             childList: true,
             subtree: true,
@@ -184,12 +229,80 @@
         if (bodyObserver) { bodyObserver.disconnect(); bodyObserver = null; }
     }
 
-    function onLoad() {
-        loaded = true;
+    function watchHead() {
+        var head = document.head;
+        if (!head || headObserver) return;
+        headObserver = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var removed = mutations[i].removedNodes;
+                for (var j = 0; j < removed.length; j++) {
+                    var n = removed[j];
+                    if (n.nodeType === 1 && n.id === CSS_ID) {
+                        injectCSS();
+                        return;
+                    }
+                }
+            }
+        });
+        headObserver.observe(head, { childList: true });
+    }
+
+    function watchGlobal() {
+        if (globalObserver) return;
+        globalObserver = new MutationObserver(function (mutations) {
+            for (var i = 0; i < mutations.length; i++) {
+                var m = mutations[i];
+                if (m.type === 'characterData') {
+                    fixTextNode(m.target);
+                    continue;
+                }
+                var added = m.addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                    var n = added[j];
+                    if (n.nodeType === 3) fixTextNode(n);
+                    else if (n.nodeType === 1 && n.tagName !== 'IFRAME' && n.tagName !== 'SCRIPT' && n.tagName !== 'STYLE') walk(n);
+                }
+            }
+            if (!document.getElementById(CSS_ID)) injectCSS();
+        });
+        globalObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+            characterData: true
+        });
+    }
+
+    function navPatch() {
         injectCSS();
         setFavicon();
         watchTitle();
+        watchHead();
+        var titles = document.getElementsByTagName('title');
+        for (var i = 0; i < titles.length; i++) fixTitleEl(titles[i]);
         if (document.body) walk(document.body);
+    }
+
+    function wrapHistory() {
+        if (historyWrapped) return;
+        historyWrapped = true;
+        ['pushState', 'replaceState'].forEach(function (name) {
+            var orig = history[name];
+            history[name] = function () {
+                navPatch();
+                var r = orig.apply(this, arguments);
+                navPatch();
+                setTimeout(navPatch, 0);
+                return r;
+            };
+        });
+        window.addEventListener('popstate', function () { navPatch(); });
+    }
+
+    var loadHooked = false;
+    function hookLoad() {
+        if (loadHooked) return;
+        loadHooked = true;
+        window.addEventListener('load', navPatch, { once: true });
     }
 
     function apply() {
@@ -197,20 +310,27 @@
         setFavicon();
         patchTitle();
         watchTitle();
+        watchHead();
+        watchGlobal();
+        wrapHistory();
+        hookLoad();
         var titles = document.getElementsByTagName('title');
         for (var i = 0; i < titles.length; i++) fixTitleEl(titles[i]);
         if (document.body) startBodyObserver();
         else document.addEventListener('DOMContentLoaded', startBodyObserver, { once: true });
-        if (!loaded) {
-            window.addEventListener('load', onLoad, { once: true });
-        }
     }
 
     function teardown() {
         removeCSS();
+        restoreFavicon();
         unwatchTitle();
         stopBodyObserver();
+        if (headObserver) { headObserver.disconnect(); headObserver = null; }
+        if (globalObserver) { globalObserver.disconnect(); globalObserver = null; }
         unpatchTitle();
+        var titles = document.getElementsByTagName('title');
+        for (var i = 0; i < titles.length; i++) unfixTitleEl(titles[i]);
+        if (document.body) unwalk(document.body);
     }
 
     window.NX.features.roblox2019 = {
