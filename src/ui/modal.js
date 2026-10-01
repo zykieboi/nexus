@@ -171,6 +171,10 @@
                 cat: 'visual', label: 'Roblox 2019L Theme',
                 desc: 'Makes Octane to look like Roblox back in 2019.'
             },
+            hideChat: {
+                cat: 'visual', label: 'Hide Chat',
+                desc: 'Hides the chat across the site.'
+            },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
