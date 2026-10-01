@@ -10,9 +10,9 @@
 
 </div>
 
-<h2>Privacy (useless)</h2>
+<h2>Privacy</h2>
 
-<p>Nexus doesn't grab your tokens like the personal ones you use for Octane. Every token is generated in your own browser, stored in Tampermonkey, and only ever sent to the Nexus, the userscript's @connect line blocks every other domain. <strong>The Worker stores your own Aisaka ID, Username and Timestamps, nothing else. No cookies, no .ROBLOSECURITY, no IP, no site data</strong>. Nexus tokens aren't <strong>tied</strong> to Aisaka's login, so nobody can use one to <strong>access</strong> your account.</p>
+<p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you. Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
 
 <h2>Installation</h2>
 
