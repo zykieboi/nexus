@@ -162,8 +162,8 @@
 
         var cats = [
             { id: 'visual', label: 'Visual' },
-            { id: 'function', label: 'Function' },
-            { id: 'performance', label: 'Performance' }
+            { id: 'features', label: 'Features' },
+            { id: 'optimize', label: 'Optimize' }
         ];
 
         var opts = {
@@ -180,19 +180,19 @@
                 desc: 'Replace the navbar logo with your own image.'
             },
             inventorySearch: {
-                cat: 'function', label: 'Inventory Search',
+                cat: 'features', label: 'Inventory Search',
                 desc: 'Adds a search bar to your inventory.'
             },
             bulkUnfriend: {
-                cat: 'function', label: 'Bulk Unfriend',
+                cat: 'features', label: 'Bulk Unfriend',
                 desc: 'Select multiple friends and remove them all at once.'
             },
             rap: {
-                cat: 'function', label: 'RAP on Profile',
+                cat: 'features', label: 'RAP on Profile',
                 desc: 'Shows total RAP next to profile stats.'
             },
             removeAds: {
-                cat: 'performance', label: 'Remove Ads',
+                cat: 'optimize', label: 'Remove Ads',
                 desc: 'Hides all advertisement banners across the site.'
             }
         };
@@ -245,9 +245,9 @@
                         var f = window.NX.features[k];
                         if (!f) return;
                         if (this.checked) {
-                            if (typeof f.apply === 'function') f.apply();
+                            if (typeof f.apply === 'features') f.apply();
                         } else {
-                            if (typeof f.teardown === 'function') f.teardown();
+                            if (typeof f.teardown === 'features') f.teardown();
                         }
                     };
                 })(key));
