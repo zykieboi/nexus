@@ -21,8 +21,12 @@
 
 <h2>Settings</h2>
 
-<p>Click the <strong>Nexus</strong> tab in the top navigation on any page. The settings modal opens with every feature listed and a toggle for each one. Changes save immediately.
+<p>Click the <strong>Nexus</strong> container in the sidebar navigation on any page. The settings modal opens with every feature listed and a toggle for each one. Changes save immediately.
 </p>
+
+<h2>test out in-coming features</h2>
+
+if u lwk wanna test new features (some are buggy click <a href="https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js">here</a>)
 
 <h2>Credits</h2>
 <p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
