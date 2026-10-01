@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.5
+// @version      1.0.7.6
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=1
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=2
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -30,6 +30,7 @@
     window.NX.role = null;
 
     var ADMIN_HASH = '#nexus-admin';
+    var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
     var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
 
     HOSTS.forEach(function (host) {
@@ -79,6 +80,17 @@
 
     window.NX.getMeId = meId;
     window.NX.getMeName = meName;
+
+    function pingCount() {
+        var id = meId();
+        if (!id) return;
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: WORKER + '/api/nexus/ping?id=' + id,
+            timeout: 5000
+        });
+    }
+    window.NX.pingCount = pingCount;
 
     function refreshRole() {
         if (!window.NX.server || typeof window.NX.server.me !== 'function') {
@@ -240,6 +252,7 @@
         refreshRole().then(function () {
             applyAll();
             tick();
+            pingCount();
         });
     }
 
