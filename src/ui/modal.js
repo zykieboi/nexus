@@ -171,13 +171,13 @@
                 cat: 'visual', label: 'Roblox 2019L Theme',
                 desc: 'Makes Octane to look like Roblox back in 2019.'
             },
-            hideChat: {
-                cat: 'visual', label: 'Hide Chat',
-                desc: 'Hides the chat across the site.'
-            },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
+            },
+            hideChat: {
+                cat: 'visual', label: 'Hide Chat',
+                desc: 'Hides the chat across the site.'
             },
             customLogo: {
                 cat: 'visual', label: 'Custom Logo',
@@ -269,6 +269,26 @@
 
         var footer = document.createElement('div');
         footer.className = 'nx-footer';
+
+        var status = document.createElement('div');
+        status.textContent = 'Users: …';
+        footer.appendChild(status);
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'https://nexus-admin.masonreed-exe.workers.dev/api/nexus/count',
+            timeout: 5000,
+            onload: function (res) {
+                try {
+                    status.textContent = 'Users: ' + JSON.parse(res.responseText).count;
+                } catch (e) {
+                    status.textContent = 'Users: —';
+                }
+            },
+            onerror: function () {
+                status.textContent = 'Users: —';
+            }
+        });
 
         var save = document.createElement('button');
         save.className = 'save-btn';
