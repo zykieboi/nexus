@@ -2,6 +2,8 @@
 
 <img src="img/banner.png" width="25%">
 
+<p><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnexus-admin.masonreed-exe.workers.dev%2Fapi%2Fnexus%2Fcount&query=count&label=Users&color=blue" alt="Nexus Users"></p> 
+
 <p>Extension for <a href="https://www.octane.wtf">Octane</a>.</p>
 
 <p><strong>This project is work in progress and 100% open-source. Any issues found, please report them by clicking <a href="https://github.com/zykieboi/nexus/issues/new">here</a>!</strong></p>
@@ -19,14 +21,15 @@
 
 <p>Tampermonkey checks for updates automatically. If you want to force one, either open the Tampermonkey dashboard and press <strong>Check for updates</strong> on the userscript or click the <strong>Installation link</strong> to update.</p>
 
+<h2>test out in-coming features</h2>
+
+if u lwk wanna test new features or wanna look what im working on, click <a href="https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js">here</a>
+
 <h2>Settings</h2>
 
 <p>Click the <strong>Nexus</strong> container in the sidebar navigation on any page. The settings modal opens with every feature listed and a toggle for each one. Changes save immediately.
 </p>
 
-<h2>test out in-coming features</h2>
-
-if u lwk wanna test new features (some are buggy, will be releasing more, click <a href="https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js">here</a>)
 
 <h2>Credits</h2>
 <p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
