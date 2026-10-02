@@ -2895,10 +2895,6 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
-                '.nx-select{padding:6px 10px;background:#2a2c2e;color:#e8e8e8;',
-                'border:1px solid #3a3d40;border-radius:6px;font-family:inherit;',
-                'font-size:13px;cursor:pointer;outline:none;min-width:140px}',
-                '.nx-select:hover{background:#2f3234}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #343638;flex-shrink:0}',
                 '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
@@ -2949,10 +2945,6 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
-                '.nx-select{padding:6px 10px;background:#fff;color:#232527;',
-                'border:1px solid #c7cbce;border-radius:6px;font-family:inherit;',
-                'font-size:13px;cursor:pointer;outline:none;min-width:140px}',
-                '.nx-select:hover{background:#f2f4f5}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #e1e4e8;flex-shrink:0}',
                 '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
@@ -3067,6 +3059,7 @@
 
             keys.forEach(function(key) {
                 var cfg = opts[key];
+                var on = window.NX.settings.get(key);
 
                 var row = document.createElement('div');
                 row.className = 'nx-row';
@@ -3084,75 +3077,34 @@
 
                 text.appendChild(label);
                 text.appendChild(desc);
+
+                var toggle = document.createElement('label');
+                toggle.className = 'nx-toggle';
+
+                var input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = on;
+
+                input.addEventListener('change', (function(k) {
+                    return function() {
+                        window.NX.settings.set(k, this.checked);
+                        var f = window.NX.features[k];
+                        if (!f) return;
+                        if (this.checked) {
+                            if (typeof f.apply === 'function') f.apply();
+                        } else {
+                            if (typeof f.teardown === 'function') f.teardown();
+                        }
+                    };
+                })(key));
+
+                var slider = document.createElement('span');
+                slider.className = 'slider';
+
+                toggle.appendChild(input);
+                toggle.appendChild(slider);
                 row.appendChild(text);
-
-                if (cfg.type === 'select') {
-                    var feat = window.NX.features[key];
-                    var currentId = feat && typeof feat.getFontId === 'function'
-                        ? feat.getFontId()
-                        : 'default';
-
-                    var select = document.createElement('select');
-                    select.className = 'nx-select';
-
-                    var fontList = feat && feat.FONTS ? feat.FONTS : [{ id: 'default', label: 'Default' }];
-                    fontList.forEach(function (f) {
-                        var o = document.createElement('option');
-                        o.value = f.id;
-                        o.textContent = f.label;
-                        select.appendChild(o);
-                    });
-
-                    select.value = currentId;
-
-                    select.addEventListener('change', (function (k) {
-                        return function () {
-                            var f = window.NX.features[k];
-                            if (!f) return;
-                            if (typeof f.setFontId === 'function') {
-                                f.setFontId(this.value);
-                            }
-                            if (this.value !== 'default' && typeof f.apply === 'function') {
-                                f.apply();
-                            }
-                            if (this.value === 'default' && typeof f.teardown === 'function') {
-                                f.teardown();
-                            }
-                        };
-                    })(key));
-
-                    row.appendChild(select);
-                } else {
-                    var on = window.NX.settings.get(key);
-
-                    var toggle = document.createElement('label');
-                    toggle.className = 'nx-toggle';
-
-                    var input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.checked = on;
-
-                    input.addEventListener('change', (function(k) {
-                        return function() {
-                            window.NX.settings.set(k, this.checked);
-                            var f = window.NX.features[k];
-                            if (!f) return;
-                            if (this.checked) {
-                                if (typeof f.apply === 'function') f.apply();
-                            } else {
-                                if (typeof f.teardown === 'function') f.teardown();
-                            }
-                        };
-                    })(key));
-
-                    var slider = document.createElement('span');
-                    slider.className = 'slider';
-
-                    toggle.appendChild(input);
-                    toggle.appendChild(slider);
-                    row.appendChild(toggle);
-                }
-
+                row.appendChild(toggle);
                 content.appendChild(row);
             });
         });
