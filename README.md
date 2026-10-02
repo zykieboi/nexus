@@ -2,8 +2,6 @@
 
 <img src="img/banner.png" width="25%">
 
-<p><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnexus-admin.masonreed-exe.workers.dev%2Fapi%2Fnexus%2Fcount&query=count&label=Online%20Users%20(within%2060s)&color=blue" alt="Online Users (within 60s)"></p>
-
 <p>Extension for <a href="https://www.octane.wtf">Octane</a>.</p>
 
 <p><strong>This project is work in progress and 100% open-source. Any issues found, please report them by clicking <a href="https://github.com/zykieboi/nexus/issues/new">here</a>!</strong></p>
