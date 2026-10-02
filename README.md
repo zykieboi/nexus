@@ -2,7 +2,7 @@
 
 <img src="img/banner.png" width="25%">
 
-<p><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnexus-admin.masonreed-exe.workers.dev%2Fapi%2Fnexus%2Fcount&query=count&label=Active%20Users&color=blue" alt="Active Users"></p>
+<p><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fnexus-admin.masonreed-exe.workers.dev%2Fapi%2Fnexus%2Fcount&query=count&label=Active%20Users&color=blue" alt="Online Users (within 60s)"></p>
 
 <p>Extension for <a href="https://www.octane.wtf">Octane</a>.</p>
 
