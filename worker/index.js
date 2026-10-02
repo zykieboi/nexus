@@ -5,18 +5,8 @@ function json(obj, status, cors) {
     });
 }
 
-const USER_COUNT_KEY = 'user_count';
-const SEEN_TTL = 60 * 60 * 24;
-
-async function trackUser(env, id) {
-    if (!id) return;
-    const dayKey = 'seen:' + id;
-    const already = await env.NEXUS_KV.get(dayKey);
-    if (already) return;
-    await env.NEXUS_KV.put(dayKey, '1', { expirationTtl: SEEN_TTL });
-    const n = parseInt(await env.NEXUS_KV.get(USER_COUNT_KEY) || '0', 10);
-    await env.NEXUS_KV.put(USER_COUNT_KEY, String(n + 1));
-}
+const ONLINE_TTL_MS = 2 * 60 * 1000;
+const ONLINE_KEY = 'online_users';
 
 export default {
     async fetch(request, env, ctx) {
@@ -42,12 +32,12 @@ export default {
 
         if (url.pathname === '/api/nexus/ping') {
             const id = url.searchParams.get('id');
-            ctx.waitUntil(trackUser(env, id));
+            if (id) ctx.waitUntil(trackOnline(env, id));
             return json({ ok: true }, 200, cors);
         }
 
         if (url.pathname === '/api/nexus/count') {
-            const n = parseInt(await env.NEXUS_KV.get(USER_COUNT_KEY) || '0', 10);
+            const n = await countOnline(env);
             return json({ count: n }, 200, cors);
         }
 
@@ -107,3 +97,19 @@ export default {
         return json({ error: 'not found' }, 404, cors);
     }
 };
+
+async function trackOnline(env, id) {
+    const map = (await env.NEXUS_KV.get(ONLINE_KEY, 'json')) || {};
+    map[id] = Date.now();
+    await env.NEXUS_KV.put(ONLINE_KEY, JSON.stringify(map));
+}
+
+async function countOnline(env) {
+    const map = (await env.NEXUS_KV.get(ONLINE_KEY, 'json')) || {};
+    const cutoff = Date.now() - ONLINE_TTL_MS;
+    let n = 0;
+    for (const id in map) {
+        if (map[id] >= cutoff) n++;
+    }
+    return n;
+}
