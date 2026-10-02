@@ -2611,6 +2611,226 @@
     };
 })();
 
+/* src/features/hide-chat.js */
+(function() {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STYLE_ID = 'nx-hide-chat';
+    var CSS =
+        '#chat-container,' +
+        '.chat-container,' +
+        '.chat,' +
+        '.chat-main,' +
+        '.chat-windows-header,' +
+        '.chat-body,' +
+        '#dialogs,' +
+        '.dialogs,' +
+        '#dialogs-minimize,' +
+        '.chat-placeholder,' +
+        'iframe[src*="/theme2020/chat"],' +
+        'iframe[title="Chat"]{' +
+        'display:none !important;' +
+        'visibility:hidden !important;' +
+        'pointer-events:none !important;' +
+        'width:0 !important;' +
+        'height:0 !important;' +
+        '}';
+
+    var observer = null;
+
+    function inject() {
+        if (document.getElementById(STYLE_ID)) return;
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        (document.head || document.documentElement).appendChild(s);
+    }
+
+    function removeCSS(doc) {
+        if (!doc) return;
+        var s = doc.getElementById(STYLE_ID);
+        if (s) s.remove();
+    }
+
+    function sweepDoc(doc) {
+        if (!doc) return;
+        var chat = doc.querySelector('#chat-container, .chat-container');
+        if (chat) {
+            chat.style.setProperty('display', 'none', 'important');
+            chat.style.setProperty('visibility', 'hidden', 'important');
+            chat.style.setProperty('pointer-events', 'none', 'important');
+        }
+        var frames = doc.querySelectorAll('iframe[src*="/theme2020/chat"], iframe[title="Chat"]');
+        for (var i = 0; i < frames.length; i++) {
+            frames[i].style.setProperty('display', 'none', 'important');
+            frames[i].style.setProperty('visibility', 'hidden', 'important');
+            frames[i].style.setProperty('width', '0', 'important');
+            frames[i].style.setProperty('height', '0', 'important');
+            frames[i].style.setProperty('pointer-events', 'none', 'important');
+        }
+    }
+
+    function injectInto(doc) {
+        if (!doc || !doc.head) return;
+        if (doc.getElementById(STYLE_ID)) return;
+        var s = doc.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        doc.head.appendChild(s);
+    }
+
+    function sweepAll() {
+        inject();
+        sweepDoc(document);
+        var frames = document.getElementsByTagName('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var d;
+            try { d = frames[i].contentDocument; } catch (e) { continue; }
+            if (d) {
+                try { injectInto(d); } catch (e) {}
+                try { sweepDoc(d); } catch (e) {}
+            }
+        }
+    }
+
+    function startObserver() {
+        if (observer || !document.body) return;
+        observer = new MutationObserver(sweepAll);
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function stopObserver() {
+        if (observer) { observer.disconnect(); observer = null; }
+    }
+
+    function apply() {
+        inject();
+        sweepAll();
+        if (document.body) startObserver();
+        else document.addEventListener('DOMContentLoaded', function () {
+            sweepAll();
+            startObserver();
+        }, { once: true });
+    }
+
+    function teardown() {
+        removeCSS(document);
+        var frames = document.getElementsByTagName('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var d;
+            try { d = frames[i].contentDocument; } catch (e) { continue; }
+            if (d) removeCSS(d);
+        }
+        stopObserver();
+    }
+
+    window.NX.features.hideChat = {
+        apply: apply,
+        teardown: teardown
+    };
+})();
+
+/* src/features/custom-font.js */
+(function() {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STYLE_ID = 'nx-custom-font';
+    var STORAGE_KEY = 'nx_custom_font';
+
+    var FONTS = [
+        { id: 'default',    label: 'Default',          stack: '' },
+        { id: 'roboto',     label: 'Roboto',           stack: '"Roboto", sans-serif' },
+        { id: 'opensans',   label: 'Open Sans',        stack: '"Open Sans", sans-serif' },
+        { id: 'lato',       label: 'Lato',             stack: '"Lato", sans-serif' },
+        { id: 'montserrat', label: 'Montserrat',       stack: '"Montserrat", sans-serif' },
+        { id: 'inter',      label: 'Inter',            stack: '"Inter", sans-serif' },
+        { id: 'poppins',    label: 'Poppins',          stack: '"Poppins", sans-serif' },
+        { id: 'nunito',     label: 'Nunito',           stack: '"Nunito", sans-serif' },
+        { id: 'jetbrains',  label: 'JetBrains Mono',   stack: '"JetBrains Mono", monospace' },
+        { id: 'comic',      label: 'Comic Sans',       stack: '"Comic Sans MS", cursive' }
+    ];
+
+    var GOOGLE_FONTS = [
+        'Roboto', 'Open Sans', 'Lato', 'Montserrat',
+        'Inter', 'Poppins', 'Nunito', 'JetBrains Mono'
+    ];
+
+    function getFontId() {
+        try { return localStorage.getItem(STORAGE_KEY) || 'default'; }
+        catch (e) { return 'default'; }
+    }
+
+    function setFontId(id) {
+        try { localStorage.setItem(STORAGE_KEY, id); } catch (e) {}
+        inject();
+    }
+
+    function fontById(id) {
+        for (var i = 0; i < FONTS.length; i++) {
+            if (FONTS[i].id === id) return FONTS[i];
+        }
+        return FONTS[0];
+    }
+
+    var linksInjected = false;
+    function injectGoogleFonts() {
+        if (linksInjected) return;
+        linksInjected = true;
+        var families = GOOGLE_FONTS.map(function (f) {
+            return 'family=' + f.replace(/ /g, '+') + ':wght@400;500;600;700';
+        }).join('&');
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?' + families + '&display=swap';
+        (document.head || document.documentElement).appendChild(l);
+    }
+
+    function inject() {
+        var old = document.getElementById(STYLE_ID);
+        if (old) old.remove();
+
+        var cfg = fontById(getFontId());
+        if (!cfg.stack) return;
+
+        injectGoogleFonts();
+
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent =
+            'html, body, #__next, .gotham-font, .gotham-font * {' +
+            'font-family: ' + cfg.stack + ' !important;' +
+            '}';
+        (document.head || document.documentElement).appendChild(s);
+    }
+
+    function apply() {
+        inject();
+        new MutationObserver(function () {
+            if (!document.getElementById(STYLE_ID) && getFontId() !== 'default') inject();
+        }).observe(document.head || document.documentElement, { childList: true });
+    }
+
+    function teardown() {
+        var s = document.getElementById(STYLE_ID);
+        if (s) s.remove();
+    }
+
+    window.NX.features.customFont = {
+        apply: apply,
+        teardown: teardown,
+        FONTS: FONTS,
+        getFontId: getFontId,
+        setFontId: function (id) { setFontId(id); },
+        fontById: fontById
+    };
+})();
+
 /* src/ui/modal.js */
 (function() {
     'use strict';
@@ -2619,6 +2839,7 @@
     window.NX.ui = window.NX.ui || {};
 
     var STYLE_ID = 'nx-modal-theme-style';
+    var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
 
     function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
@@ -2674,7 +2895,12 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
+                '.nx-select{padding:6px 10px;background:#2a2c2e;color:#e8e8e8;',
+                'border:1px solid #3a3d40;border-radius:6px;font-family:inherit;',
+                'font-size:13px;cursor:pointer;outline:none;min-width:140px}',
+                '.nx-select:hover{background:#2f3234}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #343638;flex-shrink:0}',
+                '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
                 'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
                 'width:100%;font-family:inherit}',
@@ -2723,7 +2949,12 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
+                '.nx-select{padding:6px 10px;background:#fff;color:#232527;',
+                'border:1px solid #c7cbce;border-radius:6px;font-family:inherit;',
+                'font-size:13px;cursor:pointer;outline:none;min-width:140px}',
+                '.nx-select:hover{background:#f2f4f5}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #e1e4e8;flex-shrink:0}',
+                '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
                 'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
                 'width:100%;font-family:inherit}',
@@ -2789,9 +3020,18 @@
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
             },
+            hideChat: {
+                cat: 'visual', label: 'Hide Chat',
+                desc: 'Hides the chat across the site.'
+            },
             customLogo: {
                 cat: 'visual', label: 'Custom Logo',
                 desc: 'Replace the navbar logo with your own image.'
+            },
+            customFont: {
+                cat: 'visual', label: 'Custom Font',
+                desc: 'Apply a custom font to the whole site.',
+                type: 'select'
             },
             inventorySearch: {
                 cat: 'features', label: 'Inventory Search',
@@ -2827,7 +3067,6 @@
 
             keys.forEach(function(key) {
                 var cfg = opts[key];
-                var on = window.NX.settings.get(key);
 
                 var row = document.createElement('div');
                 row.className = 'nx-row';
@@ -2845,40 +3084,101 @@
 
                 text.appendChild(label);
                 text.appendChild(desc);
-
-                var toggle = document.createElement('label');
-                toggle.className = 'nx-toggle';
-
-                var input = document.createElement('input');
-                input.type = 'checkbox';
-                input.checked = on;
-
-                input.addEventListener('change', (function(k) {
-                    return function() {
-                        window.NX.settings.set(k, this.checked);
-                        var f = window.NX.features[k];
-                        if (!f) return;
-                        if (this.checked) {
-                            if (typeof f.apply === 'function') f.apply();
-                        } else {
-                            if (typeof f.teardown === 'function') f.teardown();
-                        }
-                    };
-                })(key));
-
-                var slider = document.createElement('span');
-                slider.className = 'slider';
-
-                toggle.appendChild(input);
-                toggle.appendChild(slider);
                 row.appendChild(text);
-                row.appendChild(toggle);
+
+                if (cfg.type === 'select') {
+                    var feat = window.NX.features[key];
+                    var currentId = feat && typeof feat.getFontId === 'function'
+                        ? feat.getFontId()
+                        : 'default';
+
+                    var select = document.createElement('select');
+                    select.className = 'nx-select';
+
+                    var fontList = feat && feat.FONTS ? feat.FONTS : [{ id: 'default', label: 'Default' }];
+                    fontList.forEach(function (f) {
+                        var o = document.createElement('option');
+                        o.value = f.id;
+                        o.textContent = f.label;
+                        select.appendChild(o);
+                    });
+
+                    select.value = currentId;
+
+                    select.addEventListener('change', (function (k) {
+                        return function () {
+                            var f = window.NX.features[k];
+                            if (!f) return;
+                            if (typeof f.setFontId === 'function') {
+                                f.setFontId(this.value);
+                            }
+                            if (this.value !== 'default' && typeof f.apply === 'function') {
+                                f.apply();
+                            }
+                            if (this.value === 'default' && typeof f.teardown === 'function') {
+                                f.teardown();
+                            }
+                        };
+                    })(key));
+
+                    row.appendChild(select);
+                } else {
+                    var on = window.NX.settings.get(key);
+
+                    var toggle = document.createElement('label');
+                    toggle.className = 'nx-toggle';
+
+                    var input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = on;
+
+                    input.addEventListener('change', (function(k) {
+                        return function() {
+                            window.NX.settings.set(k, this.checked);
+                            var f = window.NX.features[k];
+                            if (!f) return;
+                            if (this.checked) {
+                                if (typeof f.apply === 'function') f.apply();
+                            } else {
+                                if (typeof f.teardown === 'function') f.teardown();
+                            }
+                        };
+                    })(key));
+
+                    var slider = document.createElement('span');
+                    slider.className = 'slider';
+
+                    toggle.appendChild(input);
+                    toggle.appendChild(slider);
+                    row.appendChild(toggle);
+                }
+
                 content.appendChild(row);
             });
         });
 
         var footer = document.createElement('div');
         footer.className = 'nx-footer';
+
+        var status = document.createElement('div');
+        status.className = 'nx-users';
+        status.textContent = 'Users: …';
+        footer.appendChild(status);
+
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: WORKER + '/api/nexus/count',
+            timeout: 5000,
+            onload: function (res) {
+                try {
+                    status.textContent = 'Users: ' + JSON.parse(res.responseText).count;
+                } catch (e) {
+                    status.textContent = 'Users: —';
+                }
+            },
+            onerror: function () { status.textContent = 'Users: —'; },
+            ontimeout: function () { status.textContent = 'Users: —'; }
+        });
 
         var save = document.createElement('button');
         save.className = 'save-btn';
