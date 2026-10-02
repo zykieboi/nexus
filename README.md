@@ -12,7 +12,7 @@
 
 <h2>Privacy</h2>
 
-<p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you. Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
+<p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you (admin deleted tho, so old). Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
 
 <h2>Installation</h2>
 
