@@ -2,7 +2,7 @@ name: Nexus
 
 on:
   push:
-    branches: [main]
+    branches: [testing]
     paths:
       - 'src/**'
       - 'build.js'
@@ -19,6 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: testing
 
       - uses: actions/setup-node@v4
         with:
@@ -36,5 +37,5 @@ jobs:
             echo "no changes"
           else
             git commit -m "build: regenerate bundle [skip ci]"
-            git push
+            git push origin testing
           fi
