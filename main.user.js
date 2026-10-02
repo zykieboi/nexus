@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.6
+// @version      1.0.7.7
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -81,6 +81,8 @@
     window.NX.getMeId = meId;
     window.NX.getMeName = meName;
 
+    var pingTimer = null;
+
     function pingCount() {
         var id = meId();
         if (!id) return;
@@ -91,6 +93,18 @@
         });
     }
     window.NX.pingCount = pingCount;
+
+    function startPing() {
+        if (pingTimer) return;
+        pingCount();
+        pingTimer = setInterval(function () {
+            if (!document.hidden) pingCount();
+        }, 30000);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) pingCount();
+    });
 
     function refreshRole() {
         if (!window.NX.server || typeof window.NX.server.me !== 'function') {
@@ -252,7 +266,7 @@
         refreshRole().then(function () {
             applyAll();
             tick();
-            pingCount();
+            startPing();
         });
     }
 
