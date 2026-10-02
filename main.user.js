@@ -20,7 +20,6 @@
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
-
 (function () {
     'use strict';
 
@@ -81,6 +80,8 @@
     window.NX.getMeId = meId;
     window.NX.getMeName = meName;
 
+    var pingTimer = null;
+
     function pingCount() {
         var id = meId();
         if (!id) return;
@@ -91,6 +92,18 @@
         });
     }
     window.NX.pingCount = pingCount;
+
+    function startPing() {
+        if (pingTimer) return;
+        pingCount();
+        pingTimer = setInterval(function () {
+            if (!document.hidden) pingCount();
+        }, 30000);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) pingCount();
+    });
 
     function refreshRole() {
         if (!window.NX.server || typeof window.NX.server.me !== 'function') {
@@ -196,6 +209,7 @@
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
         if (s.get('roblox2019') && f.roblox2019) f.roblox2019.apply();
         if (s.get('hideChat') && f.hideChat) f.hideChat.apply();
+        if (s.get('customFont') && f.customFont) f.customFont.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (f.announcement) f.announcement.apply();
     }
@@ -252,7 +266,7 @@
         refreshRole().then(function () {
             applyAll();
             tick();
-            pingCount();
+            startPing();
         });
     }
 
