@@ -1,3 +1,5 @@
+// src/features/rap.js
+
 (function () {
     'use strict';
 
@@ -9,6 +11,7 @@
     var MSG_OPEN = 'nx-rap-open-modal';
     var THUMB_BATCH = 'https://octane.wtf/apisite/thumbnails/v1/assets?assetIds=';
     var STYLE_ID = 'nx-rap-style';
+    var RAP_CACHE_PREFIX = 'nx_rap_';
 
     var isTop = window.top === window.self;
 
@@ -17,18 +20,15 @@
     var sortBy = 'rap';
     var whoami = 'user';
     var rowScanner = null;
+    var rowScannerDone = false;
+    var injected = false;
+    var bound = false;
 
     var ASSET_TYPES = {
-        1: 'Image', 2: 'T-Shirt', 3: 'Audio', 4: 'Mesh', 5: 'Lua',
-        8: 'Hat', 9: 'Place', 10: 'Model', 11: 'Shirt', 12: 'Pants',
-        13: 'Decal', 17: 'Head', 18: 'Face', 19: 'Gear', 21: 'Badge',
-        24: 'Animation', 27: 'Torso', 28: 'Right Arm', 29: 'Left Arm',
-        30: 'Right Leg', 31: 'Left Leg', 32: 'Package',
-        37: 'Pose Animation', 38: 'Climb Animation', 40: 'Fall Animation',
-        41: 'Idle Animation', 42: 'Run Animation', 43: 'Swim Animation',
-        44: 'Walk Animation', 45: 'Emote Animation', 46: 'Mesh Part',
-        47: 'Solid Model', 48: 'Shatterbox', 56: 'Emote Animation',
-        61: 'Plugin', 62: 'Font Family'
+        8: 'Hat',
+        18: 'Face',
+        19: 'Gear',
+        56: 'Emote Animation'
     };
 
     function shortNum(n) {
@@ -63,6 +63,24 @@
         return q.get('username') || q.get('viewerName') || '';
     }
 
+    function cachedRap(userId) {
+        try {
+            var raw = sessionStorage.getItem(RAP_CACHE_PREFIX + userId);
+            if (!raw) return null;
+            var d = JSON.parse(raw);
+            if (!d || typeof d.rap !== 'number') return null;
+            if (Date.now() - d.t > 5 * 60 * 1000) return null;
+            return d.rap;
+        } catch (e) { return null; }
+    }
+
+    function cacheRap(userId, rap) {
+        try {
+            sessionStorage.setItem(RAP_CACHE_PREFIX + userId,
+                JSON.stringify({ rap: rap, t: Date.now() }));
+        } catch (e) {}
+    }
+
     function loadLimiteds(userId) {
         return fetch('/apisite/inventory/v1/users/' + userId + '/assets/collectibles',
                      { credentials: 'include' })
@@ -76,6 +94,7 @@
                     rap += p;
                     value += Number(list[i].originalPrice) || p;
                 }
+                cacheRap(userId, rap);
                 return { list: list, rap: rap, value: value };
             })
             .catch(function () { return { list: [], rap: 0, value: 0 }; });
@@ -115,7 +134,7 @@
         if (v == null) return '';
         if (typeof v === 'string' && !/^\d+$/.test(v)) return v;
         var id = parseInt(v, 10);
-        return ASSET_TYPES[id] || ('Type ' + id);
+        return ASSET_TYPES[id] || '';
     }
 
     function serialNum(item) {
@@ -756,24 +775,18 @@
     }
 
     function injectRow() {
+        if (injected) return true;
+
         var userId = currentUserId();
-        if (!userId) return true;
+        if (!userId) return false;
 
         var list = document.querySelector('.details-info');
         if (!list) return false;
-        if (list.querySelector('.nx-rap-row')) return true;
 
-        var rows = list.querySelectorAll('li');
-        var anchor = null;
-        for (var i = 0; i < rows.length; i++) {
-            var lbl = rows[i].querySelector('.text-label');
-            if (lbl && (lbl.textContent || '').trim() === 'Following') {
-                anchor = rows[i];
-                break;
-            }
-        }
-        if (!anchor) return false;
+        var rows = list.querySelectorAll(':scope > li');
+        if (!rows.length) return false;
 
+        var anchor = rows[rows.length - 1];
         var li = anchor.cloneNode(true);
         li.classList.add('nx-rap-row');
 
@@ -790,11 +803,9 @@
 
         var span = li.querySelector('.font-header-2');
         if (span) {
-            span.textContent = '\u2026';
             span.removeAttribute('ng-bind');
             span.removeAttribute('data-ng-bind');
             span.classList.remove('ng-binding');
-
             span.style.cursor = 'pointer';
             span.title = tip;
             span.addEventListener('click', function (e) {
@@ -802,6 +813,16 @@
                 e.stopPropagation();
                 window.top.postMessage({ type: MSG_OPEN, userId: userId, username: name }, '*');
             });
+
+            var cached = cachedRap(userId);
+            if (cached !== null) {
+                span.textContent = shortNum(cached);
+            } else {
+                span.textContent = '\u2026';
+                loadLimiteds(userId).then(function (data) {
+                    span.textContent = shortNum(data.rap);
+                });
+            }
         }
 
         var link = li.querySelector('a.text-name');
@@ -818,23 +839,40 @@
         }
 
         list.appendChild(li);
-
-        loadLimiteds(userId).then(function (data) {
-            if (!span) return;
-            span.textContent = shortNum(data.rap);
-            span.setAttribute('title', tip);
-        });
-
+        injected = true;
         return true;
     }
 
     function startRowScanner() {
         stopRowScanner();
-        var tries = 0;
+        rowScannerDone = false;
+
+        var burstEnd = Date.now() + 1000;
+        var burst = setInterval(function () {
+            if (injectRow()) {
+                clearInterval(burst);
+                rowScannerDone = true;
+                return;
+            }
+            if (Date.now() > burstEnd) clearInterval(burst);
+        }, 40);
+
         rowScanner = setInterval(function () {
-            if (injectRow() || ++tries > 120) stopRowScanner();
-        }, 250);
-        injectRow();
+            if (rowScannerDone) {
+                stopRowScanner();
+                return;
+            }
+            if (injectRow()) {
+                rowScannerDone = true;
+                stopRowScanner();
+            }
+        }, 500);
+
+        if (injectRow()) {
+            rowScannerDone = true;
+            clearInterval(burst);
+            stopRowScanner();
+        }
     }
 
     function stopRowScanner() {
@@ -858,31 +896,30 @@
         if (e.key === 'rbx_theme_v1') applyStyle();
     }
 
-    var styleWatchBound = false;
-
     window.NX.features.rap = {
         apply: function () {
             if (isTop) {
-                window.addEventListener('message', onMessage);
-
-                if (!styleWatchBound) {
-                    styleWatchBound = true;
+                if (!bound) {
+                    bound = true;
+                    window.addEventListener('message', onMessage);
                     window.addEventListener('octane-theme-change', onThemeChange);
                     window.addEventListener('storage', onStorage);
                 }
-            } else {
+            } else if (location.pathname.indexOf('/theme2020/users/') === 0) {
                 startRowScanner();
             }
         },
         teardown: function () {
             stopRowScanner();
+            injected = false;
+            rowScannerDone = false;
 
             if (isTop) {
-                window.removeEventListener('message', onMessage);
-                if (styleWatchBound) {
+                if (bound) {
+                    bound = false;
+                    window.removeEventListener('message', onMessage);
                     window.removeEventListener('octane-theme-change', onThemeChange);
                     window.removeEventListener('storage', onStorage);
-                    styleWatchBound = false;
                 }
                 closeModal();
                 var overlay = document.getElementById(OVERLAY_ID);
@@ -896,5 +933,3 @@
         }
     };
 })();
-
-// boom
