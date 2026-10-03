@@ -3,16 +3,13 @@
 (function () {
     'use strict';
 
-    window.NX = window.NX || {};
-    window.NX.features = window.NX.features || {};
-
     var STYLE_ID = 'nx-ub-style';
 
     var BADGES = {
         '1043': {
             label: 'Nexus Contributor',
             icon: 'https://github.com/zykieboi/nexus/blob/main/img/opsec.png?raw=true'
-            // let me know if u want one
+            // let me know if someone wants to have one
         }
     };
 
@@ -79,28 +76,18 @@
         for (var i = 0; i < headers.length; i++) place(headers[i]);
     }
 
-    window.NX.features.userBadge = {
-        apply: function () {
-            addStyle();
-            scan();
+    function apply() {
+        addStyle();
+        scan();
 
-            if (!this._obs) {
-                this._obs = new MutationObserver(scan);
-                this._obs.observe(document.documentElement, { childList: true, subtree: true });
-            }
-            if (!this._int) {
-                this._int = setInterval(scan, 1500);
-            }
-        },
-        teardown: function () {
-            if (this._obs) { this._obs.disconnect(); this._obs = null; }
-            if (this._int) { clearInterval(this._int); this._int = null; }
-
-            var badges = document.querySelectorAll('.nx-ub');
-            for (var i = 0; i < badges.length; i++) badges[i].remove();
-
-            var s = document.getElementById(STYLE_ID);
-            if (s) s.remove();
+        if (!window.__nxUbObs) {
+            window.__nxUbObs = new MutationObserver(scan);
+            window.__nxUbObs.observe(document.documentElement, { childList: true, subtree: true });
         }
-    };
+        if (!window.__nxUbInt) {
+            window.__nxUbInt = setInterval(scan, 1500);
+        }
+    }
+
+    apply();
 })();
