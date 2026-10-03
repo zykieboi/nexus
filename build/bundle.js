@@ -3016,6 +3016,10 @@
                 cat: 'visual', label: 'Roblox 2019L Theme',
                 desc: 'Makes Octane to look like Roblox back in 2019.'
             },
+            background: {
+                cat: 'visual', label: 'Custom Background',
+                desc: 'Lets you set a custom image, color, or preset behind your avatar.'
+            },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
