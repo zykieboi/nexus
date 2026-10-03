@@ -20,6 +20,7 @@ const FILES = [
     'src/features/oldroblox.js',
     'src/features/hide-chat.js',
     'src/features/custom-font.js',
+    'src/features/background.js',
     'src/ui/modal.js'
 ];
 
