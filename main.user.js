@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.7
+// @version      1.0.7.8
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=2
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=3
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -211,10 +211,24 @@
         if (s.get('roblox2019') && f.roblox2019) f.roblox2019.apply();
         if (s.get('hideChat') && f.hideChat) f.hideChat.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
+        if (s.get('background') && f.background) f.background.apply();
+        if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
         if (f.announcement) f.announcement.apply();
     }
 
     function tick() {
+        var isFrame = location.pathname.indexOf('/theme2020/') === 0;
+
+        if (isFrame) {
+            var fb = window.NX.features.background;
+            var ub = window.NX.features.userBadge;
+            var fs = window.NX.settings;
+            if (!fs) return;
+            if (fs.get('background') && fb) fb.apply();
+            if (fs.get('userBadge') && ub) ub.apply();
+            return;
+        }
+
         injectSidebar();
 
         var f = window.NX.features;
@@ -226,6 +240,8 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
+        if (s.get('background') && f.background) f.background.apply();
+        if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
     }
 
     var tries = 0;
