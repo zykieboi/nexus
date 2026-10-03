@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.8
+// @version      1.0.7.9
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -211,10 +211,20 @@
         if (s.get('hideChat') && f.hideChat) f.hideChat.apply();
         if (s.get('customFont') && f.customFont) f.customFont.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
+        if (s.get('background') && f.background) f.background.apply();
         if (f.announcement) f.announcement.apply();
     }
 
     function tick() {
+        var isFrame = location.pathname.indexOf('/theme2020/') === 0;
+
+        if (isFrame) {
+            var fb = window.NX.features.background;
+            var fs = window.NX.settings;
+            if (fs && fs.get('background') && fb) fb.apply();
+            return;
+        }
+
         injectSidebar();
 
         var f = window.NX.features;
