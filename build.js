@@ -17,8 +17,11 @@ const FILES = [
     'src/features/bulk-unfriend.js',
     'src/features/announcement.js',
     'src/features/custom-logo.js',
-    'src/features/hide-chat.js',
     'src/features/oldroblox.js',
+    'src/features/hide-chat.js',
+    'src/features/custom-font.js',
+    'src/features/background.js',
+    'src/features/UserBadge.js',
     'src/ui/modal.js'
 ];
 
