@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.9
+// @version      1.0.7.8
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
