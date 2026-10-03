@@ -3413,8 +3413,8 @@
                 desc: 'Makes Octane to look like Roblox back in 2019.'
             },
             background: {
-                cat: 'visual', label: 'Custom Background',
-                desc: 'Lets you set a custom image, color, or preset behind your avatar.'
+                cat: 'visual', label: 'Custom Avatar Background',
+                desc: 'Lets you set a types of backgrounds behind your avatar.'
             },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
