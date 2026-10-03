@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.7.8
+// @version      1.0.9.0
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -212,6 +212,7 @@
         if (s.get('customFont') && f.customFont) f.customFont.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
+        if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -220,8 +221,11 @@
 
         if (isFrame) {
             var fb = window.NX.features.background;
+            var ub = window.NX.features.userBadge;
             var fs = window.NX.settings;
-            if (fs && fs.get('background') && fb) fb.apply();
+            if (!fs) return;
+            if (fs.get('background') && fb) fb.apply();
+            if (fs.get('userBadge') && ub) ub.apply();
             return;
         }
 
