@@ -2269,128 +2269,6 @@
     };
 })();
 
-/* src/features/hide-chat.js */
-(function() {
-    'use strict';
-
-    window.NX = window.NX || {};
-    window.NX.features = window.NX.features || {};
-
-    var STYLE_ID = 'nx-hide-chat';
-    var CSS =
-        '#chat-container,' +
-        '.chat-container,' +
-        '.chat,' +
-        '.chat-main,' +
-        '.chat-windows-header,' +
-        '.chat-body,' +
-        '#dialogs,' +
-        '.dialogs,' +
-        '#dialogs-minimize,' +
-        '.chat-placeholder,' +
-        'iframe[src*="/theme2020/chat"],' +
-        'iframe[title="Chat"]{' +
-        'display:none !important;' +
-        'visibility:hidden !important;' +
-        'pointer-events:none !important;' +
-        'width:0 !important;' +
-        'height:0 !important;' +
-        '}';
-
-    var observer = null;
-
-    function inject() {
-        if (document.getElementById(STYLE_ID)) return;
-        var s = document.createElement('style');
-        s.id = STYLE_ID;
-        s.textContent = CSS;
-        (document.head || document.documentElement).appendChild(s);
-    }
-
-    function removeCSS(doc) {
-        if (!doc) return;
-        var s = doc.getElementById(STYLE_ID);
-        if (s) s.remove();
-    }
-
-    function sweepDoc(doc) {
-        if (!doc) return;
-        var chat = doc.querySelector('#chat-container, .chat-container');
-        if (chat) {
-            chat.style.setProperty('display', 'none', 'important');
-            chat.style.setProperty('visibility', 'hidden', 'important');
-            chat.style.setProperty('pointer-events', 'none', 'important');
-        }
-        var frames = doc.querySelectorAll('iframe[src*="/theme2020/chat"], iframe[title="Chat"]');
-        for (var i = 0; i < frames.length; i++) {
-            frames[i].style.setProperty('display', 'none', 'important');
-            frames[i].style.setProperty('visibility', 'hidden', 'important');
-            frames[i].style.setProperty('width', '0', 'important');
-            frames[i].style.setProperty('height', '0', 'important');
-            frames[i].style.setProperty('pointer-events', 'none', 'important');
-        }
-    }
-
-    function injectInto(doc) {
-        if (!doc || !doc.head) return;
-        if (doc.getElementById(STYLE_ID)) return;
-        var s = doc.createElement('style');
-        s.id = STYLE_ID;
-        s.textContent = CSS;
-        doc.head.appendChild(s);
-    }
-
-    function sweepAll() {
-        inject();
-        sweepDoc(document);
-        var frames = document.getElementsByTagName('iframe');
-        for (var i = 0; i < frames.length; i++) {
-            var d;
-            try { d = frames[i].contentDocument; } catch (e) { continue; }
-            if (d) {
-                try { injectInto(d); } catch (e) {}
-                try { sweepDoc(d); } catch (e) {}
-            }
-        }
-    }
-
-    function startObserver() {
-        if (observer || !document.body) return;
-        observer = new MutationObserver(sweepAll);
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    function stopObserver() {
-        if (observer) { observer.disconnect(); observer = null; }
-    }
-
-    function apply() {
-        inject();
-        sweepAll();
-        if (document.body) startObserver();
-        else document.addEventListener('DOMContentLoaded', function () {
-            sweepAll();
-            startObserver();
-        }, { once: true });
-    }
-
-    function teardown() {
-        removeCSS(document);
-        var frames = document.getElementsByTagName('iframe');
-        for (var i = 0; i < frames.length; i++) {
-            var d;
-            try { d = frames[i].contentDocument; } catch (e) { continue; }
-            if (d) removeCSS(d);
-        }
-        stopObserver();
-    }
-
-    window.NX.features.hideChat = {
-        apply: apply,
-        teardown: teardown
-    };
-})();
-
 /* src/features/oldroblox.js */
 (function() {
     'use strict';
@@ -2733,6 +2611,730 @@
     };
 })();
 
+/* src/features/hide-chat.js */
+(function() {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STYLE_ID = 'nx-hide-chat';
+    var CSS =
+        '#chat-container,' +
+        '.chat-container,' +
+        '.chat,' +
+        '.chat-main,' +
+        '.chat-windows-header,' +
+        '.chat-body,' +
+        '#dialogs,' +
+        '.dialogs,' +
+        '#dialogs-minimize,' +
+        '.chat-placeholder,' +
+        'iframe[src*="/theme2020/chat"],' +
+        'iframe[title="Chat"]{' +
+        'display:none !important;' +
+        'visibility:hidden !important;' +
+        'pointer-events:none !important;' +
+        'width:0 !important;' +
+        'height:0 !important;' +
+        '}';
+
+    var observer = null;
+
+    function inject() {
+        if (document.getElementById(STYLE_ID)) return;
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        (document.head || document.documentElement).appendChild(s);
+    }
+
+    function removeCSS(doc) {
+        if (!doc) return;
+        var s = doc.getElementById(STYLE_ID);
+        if (s) s.remove();
+    }
+
+    function sweepDoc(doc) {
+        if (!doc) return;
+        var chat = doc.querySelector('#chat-container, .chat-container');
+        if (chat) {
+            chat.style.setProperty('display', 'none', 'important');
+            chat.style.setProperty('visibility', 'hidden', 'important');
+            chat.style.setProperty('pointer-events', 'none', 'important');
+        }
+        var frames = doc.querySelectorAll('iframe[src*="/theme2020/chat"], iframe[title="Chat"]');
+        for (var i = 0; i < frames.length; i++) {
+            frames[i].style.setProperty('display', 'none', 'important');
+            frames[i].style.setProperty('visibility', 'hidden', 'important');
+            frames[i].style.setProperty('width', '0', 'important');
+            frames[i].style.setProperty('height', '0', 'important');
+            frames[i].style.setProperty('pointer-events', 'none', 'important');
+        }
+    }
+
+    function injectInto(doc) {
+        if (!doc || !doc.head) return;
+        if (doc.getElementById(STYLE_ID)) return;
+        var s = doc.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        doc.head.appendChild(s);
+    }
+
+    function sweepAll() {
+        inject();
+        sweepDoc(document);
+        var frames = document.getElementsByTagName('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var d;
+            try { d = frames[i].contentDocument; } catch (e) { continue; }
+            if (d) {
+                try { injectInto(d); } catch (e) {}
+                try { sweepDoc(d); } catch (e) {}
+            }
+        }
+    }
+
+    function startObserver() {
+        if (observer || !document.body) return;
+        observer = new MutationObserver(sweepAll);
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    function stopObserver() {
+        if (observer) { observer.disconnect(); observer = null; }
+    }
+
+    function apply() {
+        inject();
+        sweepAll();
+        if (document.body) startObserver();
+        else document.addEventListener('DOMContentLoaded', function () {
+            sweepAll();
+            startObserver();
+        }, { once: true });
+    }
+
+    function teardown() {
+        removeCSS(document);
+        var frames = document.getElementsByTagName('iframe');
+        for (var i = 0; i < frames.length; i++) {
+            var d;
+            try { d = frames[i].contentDocument; } catch (e) { continue; }
+            if (d) removeCSS(d);
+        }
+        stopObserver();
+    }
+
+    window.NX.features.hideChat = {
+        apply: apply,
+        teardown: teardown
+    };
+})();
+
+/* src/features/custom-font.js */
+(function() {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STYLE_ID = 'nx-custom-font';
+    var STORAGE_KEY = 'nx_custom_font';
+
+    var FONTS = [
+        { id: 'default',    label: 'Default',          stack: '' },
+        { id: 'roboto',     label: 'Roboto',           stack: '"Roboto", sans-serif' },
+        { id: 'opensans',   label: 'Open Sans',        stack: '"Open Sans", sans-serif' },
+        { id: 'lato',       label: 'Lato',             stack: '"Lato", sans-serif' },
+        { id: 'montserrat', label: 'Montserrat',       stack: '"Montserrat", sans-serif' },
+        { id: 'inter',      label: 'Inter',            stack: '"Inter", sans-serif' },
+        { id: 'poppins',    label: 'Poppins',          stack: '"Poppins", sans-serif' },
+        { id: 'nunito',     label: 'Nunito',           stack: '"Nunito", sans-serif' },
+        { id: 'jetbrains',  label: 'JetBrains Mono',   stack: '"JetBrains Mono", monospace' },
+        { id: 'comic',      label: 'Comic Sans',       stack: '"Comic Sans MS", cursive' }
+    ];
+
+    var GOOGLE_FONTS = [
+        'Roboto', 'Open Sans', 'Lato', 'Montserrat',
+        'Inter', 'Poppins', 'Nunito', 'JetBrains Mono'
+    ];
+
+    function getFontId() {
+        try { return localStorage.getItem(STORAGE_KEY) || 'default'; }
+        catch (e) { return 'default'; }
+    }
+
+    function setFontId(id) {
+        try { localStorage.setItem(STORAGE_KEY, id); } catch (e) {}
+        inject();
+    }
+
+    function fontById(id) {
+        for (var i = 0; i < FONTS.length; i++) {
+            if (FONTS[i].id === id) return FONTS[i];
+        }
+        return FONTS[0];
+    }
+
+    var linksInjected = false;
+    function injectGoogleFonts() {
+        if (linksInjected) return;
+        linksInjected = true;
+        var families = GOOGLE_FONTS.map(function (f) {
+            return 'family=' + f.replace(/ /g, '+') + ':wght@400;500;600;700';
+        }).join('&');
+        var l = document.createElement('link');
+        l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?' + families + '&display=swap';
+        (document.head || document.documentElement).appendChild(l);
+    }
+
+    function inject() {
+        var old = document.getElementById(STYLE_ID);
+        if (old) old.remove();
+
+        var cfg = fontById(getFontId());
+        if (!cfg.stack) return;
+
+        injectGoogleFonts();
+
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent =
+            'html, body, #__next, .gotham-font, .gotham-font * {' +
+            'font-family: ' + cfg.stack + ' !important;' +
+            '}';
+        (document.head || document.documentElement).appendChild(s);
+    }
+
+    function apply() {
+        inject();
+        new MutationObserver(function () {
+            if (!document.getElementById(STYLE_ID) && getFontId() !== 'default') inject();
+        }).observe(document.head || document.documentElement, { childList: true });
+    }
+
+    function teardown() {
+        var s = document.getElementById(STYLE_ID);
+        if (s) s.remove();
+    }
+
+    window.NX.features.customFont = {
+        apply: apply,
+        teardown: teardown,
+        FONTS: FONTS,
+        getFontId: getFontId,
+        setFontId: function (id) { setFontId(id); },
+        fontById: fontById
+    };
+})();
+
+/* src/features/background.js */
+(function () {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STORE_KEY = 'nx_bg_v1';
+    var STYLE_ID = 'nx-bg-style';
+    var ROW_ID = 'nx-bg-row';
+
+    var PRESETS = {
+        void:     'linear-gradient(135deg, #0f0c29, #302b63, #24243e)',
+        ember:    'radial-gradient(circle at 30% 30%, #e94560, #1a1a2e 70%)',
+        aurora:   'linear-gradient(120deg, #00c9ff, #92fe9d)',
+        cotton:   'linear-gradient(135deg, #ff9a9e, #fad0c4)',
+        prism:    'conic-gradient(from 180deg, #ff6b6b, #feca57, #48dbfb, #ff6b6b)',
+        liminal:  'linear-gradient(180deg, #2c3e50, #4ca1af)',
+        stardust: 'radial-gradient(ellipse at top, #ffffff22 0%, transparent 60%), linear-gradient(180deg, #0b0b1a, #1a1a3e)',
+        sunset:   'linear-gradient(180deg, #ff7e5f, #feb47b)'
+    };
+
+    var FOLDER_ICON =
+        '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">' +
+        '<path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>' +
+        '</svg>';
+
+    var CSS = [
+        '#nx-bg-row{display:block;width:100%;margin:8px 0 0;clear:both;position:relative;z-index:1}',
+        '#nx-bg-row .nx-label{display:block}',
+        '#nx-bg-row .nx-edit{display:block;text-align:right}',
+        '#nx-bg-row .nx-edit a{cursor:pointer}',
+        '#nx-bg-row .nx-panel{display:none;margin-top:8px}',
+        '#nx-bg-row .nx-panel.open{display:block}',
+        '#nx-bg-row .nx-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}',
+        '#nx-bg-row .nx-chip{width:20px;height:20px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.25);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#ddd}',
+        '#nx-bg-row .nx-chip:hover{border-color:#fff}',
+        '#nx-bg-row .nx-chip.active{outline:1px solid #fff;outline-offset:1px}',
+        '#nx-bg-row .nx-chip.none{background:#2a2a2a;color:#bbb;font-size:10px;line-height:20px;font-family:inherit}',
+        '#nx-bg-row .nx-chip.picker{background:conic-gradient(from 90deg,#f66,#fc6,#6f6,#6ff,#66f,#f6f,#f66)}',
+        '#nx-bg-row .nx-chip.custom{background:#222}',
+        '#nx-bg-row .nx-subpanel{display:none;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}',
+        '#nx-bg-row .nx-subpanel.open{display:flex}',
+        '#nx-bg-row .nx-subpanel input[type=text]{flex:1;min-width:0;background:#1a1a1a;border:1px solid #333;color:#eee;padding:4px 6px;border-radius:4px;font:inherit;font-size:12px}',
+        '#nx-bg-row .nx-subpanel input[type=text]:focus{outline:none;border-color:#666}',
+        '#nx-bg-row .nx-subpanel input[type=color]{width:36px;height:26px;padding:0;border:1px solid #333;background:#1a1a1a;border-radius:4px;cursor:pointer}',
+        '#nx-bg-row .nx-subpanel .nx-btn{cursor:pointer;background:#222;border:1px solid #333;color:#eee;padding:4px 10px;border-radius:4px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}',
+        '#nx-bg-row .nx-subpanel .nx-btn:hover{background:#2a2a2a}',
+        '#nx-bg-row .nx-subpanel .nx-or{color:#888;font-size:11px;padding:0 4px}',
+        '#nx-bg-row .nx-subpanel input[type=file]{display:none}'
+    ].join('');
+
+    var bootTimer = null;
+    var watchTimer = null;
+    var observer = null;
+    var applied = null;
+    var built = false;
+    var uid = 0;
+
+    function style() {
+        if (document.getElementById(STYLE_ID)) return;
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        document.head.appendChild(s);
+    }
+
+    function store() {
+        try {
+            var raw = GM_getValue(STORE_KEY, '{}');
+            return typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
+        } catch (e) { return {}; }
+    }
+
+    function save(s) {
+        GM_setValue(STORE_KEY, JSON.stringify(s));
+    }
+
+    function get(userId) {
+        var s = store();
+        return (s.byUser && s.byUser[String(userId)]) || null;
+    }
+
+    function set(userId, bg) {
+        var s = store();
+        if (!s.byUser) s.byUser = {};
+        if (bg) s.byUser[String(userId)] = bg;
+        else delete s.byUser[String(userId)];
+        save(s);
+    }
+
+    function isCustom(bg) { return !!bg && bg.indexOf('url(') === 0; }
+
+    function isSolid(bg) {
+        if (!bg || bg.indexOf('url(') === 0 || bg.indexOf('gradient(') !== -1) return false;
+        return bg.charAt(0) === '#' || bg.indexOf('rgb') === 0 || bg.indexOf('hsl') === 0;
+    }
+
+    function readUid() {
+        var p = new URLSearchParams(location.search);
+        return parseInt(p.get('userId'), 10) || 0;
+    }
+
+    function apply(bg) {
+        if (applied === bg) return;
+        var t = document.querySelector('.avatar-back');
+        if (!t) return;
+
+        var clear = ['background', 'background-image', 'background-color',
+                     'background-size', 'background-position', 'background-repeat'];
+        for (var i = 0; i < clear.length; i++) {
+            t.style.removeProperty(clear[i]);
+        }
+
+        if (bg) {
+            if (isSolid(bg)) {
+                t.style.setProperty('background-color', bg, 'important');
+                t.style.setProperty('background-image', 'none', 'important');
+            } else {
+                t.style.setProperty('background-image', bg, 'important');
+                t.style.setProperty('background-color', 'transparent', 'important');
+                t.style.setProperty('background-size', 'cover', 'important');
+                t.style.setProperty('background-position', 'center', 'important');
+                t.style.setProperty('background-repeat', 'no-repeat', 'important');
+            }
+        }
+        applied = bg;
+    }
+
+    function paint(state) {
+        var cur = get(uid);
+        var chips = state.chips;
+        for (var i = 0; i < chips.length; i++) {
+            var k = chips[i].dataset.key;
+            var on = false;
+            if (k === '__none__') on = !cur;
+            else if (PRESETS[k]) on = cur && PRESETS[k] === cur;
+            chips[i].classList.toggle('active', !!on);
+        }
+        state.pickerChip.classList.toggle('active', isSolid(cur));
+        state.customChip.classList.toggle('active', isCustom(cur));
+    }
+
+    function build() {
+        if (built) return;
+        var redraw = document.querySelector('.redraw-avatar');
+        if (!redraw) return;
+        if (!uid) uid = readUid();
+        if (!uid) return;
+
+        var cs = getComputedStyle(redraw);
+
+        var row = document.createElement('div');
+        row.id = ROW_ID;
+        row.style.color      = cs.color;
+        row.style.fontSize   = cs.fontSize;
+        row.style.fontWeight = cs.fontWeight;
+        row.style.fontFamily = cs.fontFamily;
+        row.style.lineHeight = cs.lineHeight;
+
+        var label = document.createElement('div');
+        label.className = 'nx-label';
+        label.textContent = 'Want a custom background?';
+        row.appendChild(label);
+
+        var edit = document.createElement('div');
+        edit.className = 'nx-edit';
+        edit.innerHTML = '<a class="text-link">Edit</a>';
+        row.appendChild(edit);
+
+        var editLink = edit.querySelector('a');
+
+        var panel = document.createElement('div');
+        panel.className = 'nx-panel';
+
+        var chipRow = document.createElement('div');
+        chipRow.className = 'nx-chips';
+        var chips = [];
+
+        var pickerChip = document.createElement('div');
+        pickerChip.className = 'nx-chip picker';
+        pickerChip.title = 'Solid color';
+        chipRow.appendChild(pickerChip);
+
+        Object.keys(PRESETS).forEach(function (k) {
+            var c = document.createElement('div');
+            c.className = 'nx-chip';
+            c.dataset.key = k;
+            c.title = k;
+            c.style.background = PRESETS[k];
+            c.addEventListener('click', function () {
+                set(uid, PRESETS[k]);
+                applied = null;
+                apply(PRESETS[k]);
+                paint(state);
+                closeSubpanels();
+            });
+            chipRow.appendChild(c);
+            chips.push(c);
+        });
+
+        var customChip = document.createElement('div');
+        customChip.className = 'nx-chip custom';
+        customChip.title = 'Custom image';
+        customChip.innerHTML = FOLDER_ICON;
+        chipRow.appendChild(customChip);
+
+        var none = document.createElement('div');
+        none.className = 'nx-chip none';
+        none.dataset.key = '__none__';
+        none.title = 'None';
+        none.textContent = '✕';
+        none.addEventListener('click', function () {
+            set(uid, null);
+            applied = null;
+            apply(null);
+            paint(state);
+            closeSubpanels();
+        });
+        chipRow.appendChild(none);
+        chips.push(none);
+
+        panel.appendChild(chipRow);
+
+        var colorBox = document.createElement('div');
+        colorBox.className = 'nx-subpanel';
+
+        var colorInput = document.createElement('input');
+        colorInput.type = 'color';
+        colorInput.value = '#1a1a2e';
+
+        var colorSet = document.createElement('button');
+        colorSet.type = 'button';
+        colorSet.className = 'nx-btn';
+        colorSet.textContent = 'Set';
+
+        colorBox.appendChild(colorInput);
+        colorBox.appendChild(colorSet);
+        panel.appendChild(colorBox);
+
+        colorSet.addEventListener('click', function (e) {
+            e.preventDefault();
+            var v = colorInput.value;
+            set(uid, v);
+            applied = null;
+            apply(v);
+            paint(state);
+            colorBox.classList.remove('open');
+        });
+
+        var imgBox = document.createElement('div');
+        imgBox.className = 'nx-subpanel';
+
+        var uploadBtn = document.createElement('label');
+        uploadBtn.className = 'nx-btn';
+        uploadBtn.innerHTML = FOLDER_ICON + '<span>Upload</span>';
+        var fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        uploadBtn.appendChild(fileInput);
+
+        var orSep = document.createElement('span');
+        orSep.className = 'nx-or';
+        orSep.textContent = 'OR';
+
+        var urlInput = document.createElement('input');
+        urlInput.type = 'text';
+        urlInput.placeholder = 'Paste IMG URL';
+
+        var urlSet = document.createElement('button');
+        urlSet.type = 'button';
+        urlSet.className = 'nx-btn';
+        urlSet.textContent = 'Set';
+
+        imgBox.appendChild(uploadBtn);
+        imgBox.appendChild(orSep);
+        imgBox.appendChild(urlInput);
+        imgBox.appendChild(urlSet);
+        panel.appendChild(imgBox);
+
+        function commitUrl() {
+            var v = urlInput.value.trim();
+            if (!v) return;
+            var bg = 'url("' + v + '")';
+            set(uid, bg);
+            applied = null;
+            apply(bg);
+            paint(state);
+            urlInput.value = '';
+            imgBox.classList.remove('open');
+        }
+
+        fileInput.addEventListener('change', function () {
+            var f = fileInput.files && fileInput.files[0];
+            if (!f) return;
+            var r = new FileReader();
+            r.onload = function () {
+                var bg = 'url("' + r.result + '")';
+                set(uid, bg);
+                applied = null;
+                apply(bg);
+                paint(state);
+                imgBox.classList.remove('open');
+                fileInput.value = '';
+            };
+            r.readAsDataURL(f);
+        });
+
+        urlSet.addEventListener('click', function (e) {
+            e.preventDefault();
+            commitUrl();
+        });
+
+        urlInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                commitUrl();
+            }
+        });
+
+        function closeSubpanels() {
+            colorBox.classList.remove('open');
+            imgBox.classList.remove('open');
+        }
+
+        pickerChip.addEventListener('click', function () {
+            var open = colorBox.classList.toggle('open');
+            if (open) { imgBox.classList.remove('open'); colorInput.focus(); }
+        });
+
+        customChip.addEventListener('click', function () {
+            var open = imgBox.classList.toggle('open');
+            if (open) { colorBox.classList.remove('open'); urlInput.focus(); }
+        });
+
+        row.appendChild(panel);
+
+        editLink.addEventListener('click', function (e) {
+            e.preventDefault();
+            var open = panel.classList.toggle('open');
+            editLink.textContent = open ? 'Close' : 'Edit';
+            if (!open) closeSubpanels();
+        });
+
+        redraw.parentNode.insertBefore(row, redraw.nextSibling);
+        built = true;
+
+        var state = { chips: chips, pickerChip: pickerChip, customChip: customChip };
+        paint(state);
+    }
+
+    function tick() {
+        if (!uid) uid = readUid();
+        if (!uid) return;
+        apply(get(uid));
+        build();
+    }
+
+    window.NX.features.background = {
+        apply: function () {
+            style();
+            tick();
+
+            var n = 0;
+            bootTimer = setInterval(function () {
+                tick();
+                if (built || ++n > 30) {
+                    clearInterval(bootTimer);
+                    bootTimer = null;
+                }
+            }, 100);
+
+            observer = new MutationObserver(function () {
+                if (!built) tick();
+            });
+            observer.observe(document.documentElement, { childList: true, subtree: true });
+
+            watchTimer = setInterval(tick, 1500);
+        },
+        teardown: function () {
+            if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
+            if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
+            if (observer) { observer.disconnect(); observer = null; }
+
+            var row = document.getElementById(ROW_ID);
+            if (row) row.remove();
+
+            var s = document.getElementById(STYLE_ID);
+            if (s) s.remove();
+
+            applied = null;
+            built = false;
+        }
+    };
+})();
+
+/* src/features/UserBadge.js */
+// src/features/UserBadge.js
+
+(function () {
+    'use strict';
+
+    window.NX = window.NX || {};
+    window.NX.features = window.NX.features || {};
+
+    var STYLE_ID = 'nx-ub-style';
+
+    var BADGES = {
+        '1043': {
+            label: 'Nexus Contributor',
+            icon: 'https://github.com/zykieboi/nexus/blob/main/img/opsec.png?raw=true'
+            // let me know if u want one
+        }
+    };
+
+    var CSS =
+        '.nx-ub{flex:0 0 auto;float:none;display:inline-block;' +
+        'background-repeat:no-repeat;background-size:contain;' +
+        'background-position:center center;vertical-align:middle;' +
+        'margin-left:-4px;margin-right:0}';
+
+    function addStyle() {
+        if (document.getElementById(STYLE_ID)) return;
+        var s = document.createElement('style');
+        s.id = STYLE_ID;
+        s.textContent = CSS;
+        document.head.appendChild(s);
+    }
+
+    function profileId() {
+        var q = new URLSearchParams(location.search).get('userId');
+        if (q) return q;
+        var m = location.pathname.match(/\/theme2020\/users\/(\d+)/);
+        return m ? m[1] : null;
+    }
+
+    function makeBadge(info, size) {
+        var el = document.createElement('span');
+        el.className = 'nx-ub';
+        el.title = info.label;
+        el.style.backgroundImage = 'url("' + info.icon + '")';
+        el.style.width = size;
+        el.style.height = size;
+        return el;
+    }
+
+    function place(header) {
+        var info = BADGES[profileId()];
+        var existing = header.querySelector('.nx-ub');
+
+        if (!info) {
+            if (existing) existing.remove();
+            return;
+        }
+
+        var h2 = header.querySelector('h2.profile-name');
+        if (!h2) return;
+
+        var size = Math.round(parseFloat(getComputedStyle(h2).fontSize) || 26) + 'px';
+
+        if (existing) {
+            existing.style.width = size;
+            existing.style.height = size;
+            return;
+        }
+
+        var badge = makeBadge(info, size);
+        var h3 = header.querySelector('h3.profile-name');
+
+        if (h3) h3.parentNode.insertBefore(badge, h3);
+        else h2.parentNode.insertBefore(badge, h2.nextSibling);
+    }
+
+    function scan() {
+        var headers = document.querySelectorAll('.header-title');
+        for (var i = 0; i < headers.length; i++) place(headers[i]);
+    }
+
+    window.NX.features.userBadge = {
+        apply: function () {
+            addStyle();
+            scan();
+
+            if (!this._obs) {
+                this._obs = new MutationObserver(scan);
+                this._obs.observe(document.documentElement, { childList: true, subtree: true });
+            }
+            if (!this._int) {
+                this._int = setInterval(scan, 1500);
+            }
+        },
+        teardown: function () {
+            if (this._obs) { this._obs.disconnect(); this._obs = null; }
+            if (this._int) { clearInterval(this._int); this._int = null; }
+
+            var badges = document.querySelectorAll('.nx-ub');
+            for (var i = 0; i < badges.length; i++) badges[i].remove();
+
+            var s = document.getElementById(STYLE_ID);
+            if (s) s.remove();
+        }
+    };
+})();
+
 /* src/ui/modal.js */
 (function() {
     'use strict';
@@ -2797,6 +3399,10 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
+                '.nx-select{padding:6px 10px;background:#2a2c2e;color:#e8e8e8;',
+                'border:1px solid #3a3d40;border-radius:6px;font-family:inherit;',
+                'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
+                '.nx-select:hover{background:#2f3234}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #343638;flex-shrink:0}',
                 '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
@@ -2847,6 +3453,10 @@
                 'transition:transform 0.2s, background 0.2s}',
                 '.nx-toggle input:checked + .slider{background:#22a24a}',
                 '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
+                '.nx-select{padding:6px 10px;background:#fff;color:#232527;',
+                'border:1px solid #c7cbce;border-radius:6px;font-family:inherit;',
+                'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
+                '.nx-select:hover{background:#f2f4f5}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #e1e4e8;flex-shrink:0}',
                 '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
@@ -2910,6 +3520,10 @@
                 cat: 'visual', label: 'Roblox 2019L Theme',
                 desc: 'Makes Octane to look like Roblox back in 2019.'
             },
+            background: {
+                cat: 'visual', label: 'Custom Avatar Background',
+                desc: 'Lets you set a types of backgrounds behind your avatar.'
+            },
             hideAlert: {
                 cat: 'visual', label: 'Hide Alert',
                 desc: 'Hides the alert banner under the navigation bar.'
@@ -2921,6 +3535,11 @@
             customLogo: {
                 cat: 'visual', label: 'Custom Logo',
                 desc: 'Replace the navbar logo with your own image.'
+            },
+            customFont: {
+                cat: 'visual', label: 'Custom Font',
+                desc: 'Apply a custom font to the whole site.',
+                type: 'select'
             },
             inventorySearch: {
                 cat: 'features', label: 'Inventory Search',
@@ -2956,7 +3575,6 @@
 
             keys.forEach(function(key) {
                 var cfg = opts[key];
-                var on = window.NX.settings.get(key);
 
                 var row = document.createElement('div');
                 row.className = 'nx-row';
@@ -2974,34 +3592,75 @@
 
                 text.appendChild(label);
                 text.appendChild(desc);
-
-                var toggle = document.createElement('label');
-                toggle.className = 'nx-toggle';
-
-                var input = document.createElement('input');
-                input.type = 'checkbox';
-                input.checked = on;
-
-                input.addEventListener('change', (function(k) {
-                    return function() {
-                        window.NX.settings.set(k, this.checked);
-                        var f = window.NX.features[k];
-                        if (!f) return;
-                        if (this.checked) {
-                            if (typeof f.apply === 'function') f.apply();
-                        } else {
-                            if (typeof f.teardown === 'function') f.teardown();
-                        }
-                    };
-                })(key));
-
-                var slider = document.createElement('span');
-                slider.className = 'slider';
-
-                toggle.appendChild(input);
-                toggle.appendChild(slider);
                 row.appendChild(text);
-                row.appendChild(toggle);
+
+                if (cfg.type === 'select') {
+                    var feat = window.NX.features[key];
+                    var currentId = feat && typeof feat.getFontId === 'function'
+                        ? feat.getFontId()
+                        : 'default';
+
+                    var select = document.createElement('select');
+                    select.className = 'nx-select';
+
+                    var fontList = feat && feat.FONTS ? feat.FONTS : [{ id: 'default', label: 'Default' }];
+                    fontList.forEach(function (f) {
+                        var o = document.createElement('option');
+                        o.value = f.id;
+                        o.textContent = f.label;
+                        select.appendChild(o);
+                    });
+
+                    select.value = currentId;
+
+                    select.addEventListener('change', (function (k) {
+                        return function () {
+                            var f = window.NX.features[k];
+                            if (!f) return;
+                            if (typeof f.setFontId === 'function') {
+                                f.setFontId(this.value);
+                            }
+                            if (this.value !== 'default' && typeof f.apply === 'function') {
+                                f.apply();
+                            }
+                            if (this.value === 'default' && typeof f.teardown === 'function') {
+                                f.teardown();
+                            }
+                        };
+                    })(key));
+
+                    row.appendChild(select);
+                } else {
+                    var on = window.NX.settings.get(key);
+
+                    var toggle = document.createElement('label');
+                    toggle.className = 'nx-toggle';
+
+                    var input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.checked = on;
+
+                    input.addEventListener('change', (function(k) {
+                        return function() {
+                            window.NX.settings.set(k, this.checked);
+                            var f = window.NX.features[k];
+                            if (!f) return;
+                            if (this.checked) {
+                                if (typeof f.apply === 'function') f.apply();
+                            } else {
+                                if (typeof f.teardown === 'function') f.teardown();
+                            }
+                        };
+                    })(key));
+
+                    var slider = document.createElement('span');
+                    slider.className = 'slider';
+
+                    toggle.appendChild(input);
+                    toggle.appendChild(slider);
+                    row.appendChild(toggle);
+                }
+
                 content.appendChild(row);
             });
         });
