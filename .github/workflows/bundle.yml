@@ -10,15 +10,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -27,14 +25,11 @@ jobs:
       - name: Build bundle
         run: node build.js
 
-      - name: Commit bundle
+      - name: Verify bundle is committed
         run: |
-          git config user.name "zykieboi"
-          git config user.email "zykieboi@users.noreply.github.com"
-          git add build/bundle.js
-          if git diff --staged --quiet; then
-            echo "no changes"
-          else
-            git commit -m "build: regenerate bundle [skip ci]"
-            git push
+          if ! git diff --quiet -- build/bundle.js; then
+            echo "::error::build/bundle.js is out of date. Run 'node build.js' locally and commit the result."
+            git --no-pager diff --stat -- build/bundle.js
+            exit 1
           fi
+          echo "bundle.js is up to date"
