@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus - NX
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.8
+// @version      1.0.9
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=3
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=4
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -213,6 +213,7 @@
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
+        if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -222,10 +223,12 @@
         if (isFrame) {
             var fb = window.NX.features.background;
             var ub = window.NX.features.userBadge;
+            var tv = window.NX.features.tradeValues;
             var fs = window.NX.settings;
             if (!fs) return;
             if (fs.get('background') && fb) fb.apply();
             if (fs.get('userBadge') && ub) ub.apply();
+            if (fs.get('tradeValues') && tv) tv.apply();
             return;
         }
 
@@ -242,6 +245,7 @@
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
+        if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
     }
 
     var tries = 0;
