@@ -22,6 +22,7 @@ const FILES = [
     'src/features/custom-font.js',
     'src/features/background.js',
     'src/features/UserBadge.js',
+    'src/featues/tradeValues.js',
     'src/ui/modal.js'
 ];
 
