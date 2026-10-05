@@ -5,8 +5,8 @@
     window.NX.features = window.NX.features || {};
 
     var STORE_KEY = 'nx_bg_v1';
-    var STYLE_ID = 'nx-bg-style';
-    var ROW_ID = 'nx-bg-row';
+    var STYLE_ID  = 'nx-bg-style';
+    var ROW_ID    = 'nx-bg-row';
 
     var PRESETS = {
         void:     'linear-gradient(135deg, #0f0c29, #302b63, #24243e)',
@@ -23,6 +23,13 @@
         '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">' +
         '<path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>' +
         '</svg>';
+
+    var applied  = null;
+    var built    = false;
+    var uid      = 0;
+    var lastRow  = null;
+    var lastCss  = '';
+    var themeBound = false;
 
     function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
@@ -74,24 +81,13 @@
         ].join('');
     }
 
-    var bootTimer = null;
-    var watchTimer = null;
-    var observer = null;
-    var themeBound = false;
-    var applied = null;
-    var built = false;
-    var uid = 0;
-    var running = false;
-
     function style() {
         var text = cssText();
-        var existing = document.getElementById(STYLE_ID);
-        if (existing) {
-            if (existing.textContent === text) return;
-            existing.textContent = text;
-            return;
-        }
-        var s = document.createElement('style');
+        if (text === lastCss) return;
+        lastCss = text;
+        var s = document.getElementById(STYLE_ID);
+        if (s) { s.textContent = text; return; }
+        s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = text;
         document.head.appendChild(s);
@@ -104,15 +100,15 @@
         } catch (e) { return {}; }
     }
     function save(s) { GM_setValue(STORE_KEY, JSON.stringify(s)); }
-    function get(userId) {
+    function get(u) {
         var s = store();
-        return (s.byUser && s.byUser[String(userId)]) || null;
+        return (s.byUser && s.byUser[String(u)]) || null;
     }
-    function set(userId, bg) {
+    function set(u, bg) {
         var s = store();
         if (!s.byUser) s.byUser = {};
-        if (bg) s.byUser[String(userId)] = bg;
-        else delete s.byUser[String(userId)];
+        if (bg) s.byUser[String(u)] = bg;
+        else delete s.byUser[String(u)];
         save(s);
     }
     function isCustom(bg) { return !!bg && bg.indexOf('url(') === 0; }
@@ -125,7 +121,7 @@
         return parseInt(p.get('userId'), 10) || 0;
     }
 
-    function apply(bg) {
+    function applyBg(bg) {
         if (applied === bg) return;
         var t = document.querySelector('.avatar-back');
         if (!t) return;
@@ -149,24 +145,28 @@
 
     function paint(state) {
         var cur = get(uid);
-        var chips = state.chips;
-        for (var i = 0; i < chips.length; i++) {
-            var k = chips[i].dataset.key;
+        for (var i = 0; i < state.chips.length; i++) {
+            var k = state.chips[i].dataset.key;
             var on = false;
             if (k === '__none__') on = !cur;
             else if (PRESETS[k]) on = cur && PRESETS[k] === cur;
-            chips[i].classList.toggle('active', !!on);
+            state.chips[i].classList.toggle('active', !!on);
         }
         state.pickerChip.classList.toggle('active', isSolid(cur));
         state.customChip.classList.toggle('active', isCustom(cur));
     }
 
     function build() {
-        if (built) return;
+        if (built && lastRow && lastRow.isConnected) return;
+        built = false;
+
         var redraw = document.querySelector('.redraw-avatar');
         if (!redraw) return;
         if (!uid) uid = readUid();
         if (!uid) return;
+
+        var old = document.getElementById(ROW_ID);
+        if (old) old.remove();
 
         var cs = getComputedStyle(redraw);
         var row = document.createElement('div');
@@ -209,7 +209,7 @@
             c.addEventListener('click', function () {
                 set(uid, PRESETS[k]);
                 applied = null;
-                apply(PRESETS[k]);
+                applyBg(PRESETS[k]);
                 paint(state);
                 closeSubpanels();
             });
@@ -231,7 +231,7 @@
         none.addEventListener('click', function () {
             set(uid, null);
             applied = null;
-            apply(null);
+            applyBg(null);
             paint(state);
             closeSubpanels();
         });
@@ -251,13 +251,12 @@
         colorBox.appendChild(colorInput);
         colorBox.appendChild(colorSet);
         panel.appendChild(colorBox);
-
         colorSet.addEventListener('click', function (e) {
             e.preventDefault();
             var v = colorInput.value;
             set(uid, v);
             applied = null;
-            apply(v);
+            applyBg(v);
             paint(state);
             colorBox.classList.remove('open');
         });
@@ -298,7 +297,7 @@
             var bg = 'url("' + v + '")';
             set(uid, bg);
             applied = null;
-            apply(bg);
+            applyBg(bg);
             paint(state);
             urlInput.value = '';
             imgBox.classList.remove('open');
@@ -311,7 +310,7 @@
                 var bg = 'url("' + r.result + '")';
                 set(uid, bg);
                 applied = null;
-                apply(bg);
+                applyBg(bg);
                 paint(state);
                 imgBox.classList.remove('open');
                 fileInput.value = '';
@@ -346,6 +345,7 @@
         });
 
         redraw.parentNode.insertBefore(row, redraw.nextSibling);
+        lastRow = row;
         built = true;
         var state = { chips: chips, pickerChip: pickerChip, customChip: customChip };
         paint(state);
@@ -354,7 +354,7 @@
     function tick() {
         if (!uid) uid = readUid();
         if (!uid) return;
-        apply(get(uid));
+        applyBg(get(uid));
         build();
     }
 
@@ -380,37 +380,21 @@
 
     window.NX.features.background = {
         apply: function () {
-            if (running) return;
-            running = true;
-
             style();
             bindTheme();
             tick();
-
-            var n = 0;
-            bootTimer = setInterval(function () {
-                tick();
-                if (built || ++n > 30) {
-                    clearInterval(bootTimer);
-                    bootTimer = null;
-                }
-            }, 100);
-
-            watchTimer = setInterval(function () {
-                if (!built) tick();
-            }, 1500);
         },
+        refresh: tick,
         teardown: function () {
-            running = false;
-            if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
-            if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
             unbindTheme();
             var row = document.getElementById(ROW_ID);
             if (row) row.remove();
             var s = document.getElementById(STYLE_ID);
             if (s) s.remove();
+            lastCss = '';
             applied = null;
             built = false;
+            lastRow = null;
         }
     };
 })();
