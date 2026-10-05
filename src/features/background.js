@@ -24,43 +24,88 @@
         '<path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"/>' +
         '</svg>';
 
-    var CSS = [
-        '#nx-bg-row{display:block;width:100%;margin:8px 0 0;clear:both;position:relative;z-index:1}',
-        '#nx-bg-row .nx-label{display:block}',
-        '#nx-bg-row .nx-edit{display:block;text-align:right}',
-        '#nx-bg-row .nx-edit a{cursor:pointer}',
-        '#nx-bg-row .nx-panel{display:none;margin-top:8px}',
-        '#nx-bg-row .nx-panel.open{display:block}',
-        '#nx-bg-row .nx-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}',
-        '#nx-bg-row .nx-chip{width:20px;height:20px;border-radius:4px;cursor:pointer;border:1px solid rgba(255,255,255,.25);box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#ddd}',
-        '#nx-bg-row .nx-chip:hover{border-color:#fff}',
-        '#nx-bg-row .nx-chip.active{outline:1px solid #fff;outline-offset:1px}',
-        '#nx-bg-row .nx-chip.none{background:#2a2a2a;color:#bbb;font-size:10px;line-height:20px;font-family:inherit}',
-        '#nx-bg-row .nx-chip.picker{background:conic-gradient(from 90deg,#f66,#fc6,#6f6,#6ff,#66f,#f6f,#f66)}',
-        '#nx-bg-row .nx-chip.custom{background:#222}',
-        '#nx-bg-row .nx-subpanel{display:none;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}',
-        '#nx-bg-row .nx-subpanel.open{display:flex}',
-        '#nx-bg-row .nx-subpanel input[type=text]{flex:1;min-width:0;background:#1a1a1a;border:1px solid #333;color:#eee;padding:4px 6px;border-radius:4px;font:inherit;font-size:12px}',
-        '#nx-bg-row .nx-subpanel input[type=text]:focus{outline:none;border-color:#666}',
-        '#nx-bg-row .nx-subpanel input[type=color]{width:36px;height:26px;padding:0;border:1px solid #333;background:#1a1a1a;border-radius:4px;cursor:pointer}',
-        '#nx-bg-row .nx-subpanel .nx-btn{cursor:pointer;background:#222;border:1px solid #333;color:#eee;padding:4px 10px;border-radius:4px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}',
-        '#nx-bg-row .nx-subpanel .nx-btn:hover{background:#2a2a2a}',
-        '#nx-bg-row .nx-subpanel .nx-or{color:#888;font-size:11px;padding:0 4px}',
-        '#nx-bg-row .nx-subpanel input[type=file]{display:none}'
-    ].join('');
+    function dark() {
+        try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
+        catch (e) { return false; }
+    }
+
+    function themeVars() {
+        if (dark()) {
+            return {
+                chipBorder: 'rgba(255,255,255,.25)',
+                chipHover: '#fff',
+                chipInk: '#ddd',
+                noneBg: '#2a2a2a',
+                noneInk: '#bbb',
+                customBg: '#222',
+                inputBg: '#1a1a1a',
+                inputBorder: '#333',
+                inputInk: '#eee',
+                inputFocus: '#666',
+                btnBg: '#222',
+                btnHover: '#2a2a2a',
+                orInk: '#888'
+            };
+        }
+        return {
+            chipBorder: 'rgba(0,0,0,.25)',
+            chipHover: '#000',
+            chipInk: '#333',
+            noneBg: '#e6e6e6',
+            noneInk: '#555',
+            customBg: '#e0e0e0',
+            inputBg: '#ffffff',
+            inputBorder: '#c7cbce',
+            inputInk: '#232527',
+            inputFocus: '#0a84ff',
+            btnBg: '#f2f4f5',
+            btnHover: '#e4e8ec',
+            orInk: '#7a7d80'
+        };
+    }
+
+    function cssText() {
+        var t = themeVars();
+        return [
+            '#nx-bg-row{display:block;width:100%;margin:8px 0 0;clear:both;position:relative;z-index:1}',
+            '#nx-bg-row .nx-label{display:block}',
+            '#nx-bg-row .nx-edit{display:block;text-align:right}',
+            '#nx-bg-row .nx-edit a{cursor:pointer}',
+            '#nx-bg-row .nx-panel{display:none;margin-top:8px}',
+            '#nx-bg-row .nx-panel.open{display:block}',
+            '#nx-bg-row .nx-chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}',
+            '#nx-bg-row .nx-chip{width:20px;height:20px;border-radius:4px;cursor:pointer;border:1px solid ' + t.chipBorder + ';box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:' + t.chipInk + '}',
+            '#nx-bg-row .nx-chip:hover{border-color:' + t.chipHover + '}',
+            '#nx-bg-row .nx-chip.active{outline:1px solid ' + t.chipHover + ';outline-offset:1px}',
+            '#nx-bg-row .nx-chip.none{background:' + t.noneBg + ';color:' + t.noneInk + ';font-size:10px;line-height:20px;font-family:inherit}',
+            '#nx-bg-row .nx-chip.picker{background:conic-gradient(from 90deg,#f66,#fc6,#6f6,#6ff,#66f,#f6f,#f66)}',
+            '#nx-bg-row .nx-chip.custom{background:' + t.customBg + '}',
+            '#nx-bg-row .nx-subpanel{display:none;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}',
+            '#nx-bg-row .nx-subpanel.open{display:flex}',
+            '#nx-bg-row .nx-subpanel input[type=text]{flex:1;min-width:0;background:' + t.inputBg + ';border:1px solid ' + t.inputBorder + ';color:' + t.inputInk + ';padding:4px 6px;border-radius:4px;font:inherit;font-size:12px}',
+            '#nx-bg-row .nx-subpanel input[type=text]:focus{outline:none;border-color:' + t.inputFocus + '}',
+            '#nx-bg-row .nx-subpanel input[type=color]{width:36px;height:26px;padding:0;border:1px solid ' + t.inputBorder + ';background:' + t.inputBg + ';border-radius:4px;cursor:pointer}',
+            '#nx-bg-row .nx-subpanel .nx-btn{cursor:pointer;background:' + t.btnBg + ';border:1px solid ' + t.inputBorder + ';color:' + t.inputInk + ';padding:4px 10px;border-radius:4px;font-size:12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px}',
+            '#nx-bg-row .nx-subpanel .nx-btn:hover{background:' + t.btnHover + '}',
+            '#nx-bg-row .nx-subpanel .nx-or{color:' + t.orInk + ';font-size:11px;padding:0 4px}',
+            '#nx-bg-row .nx-subpanel input[type=file]{display:none}'
+        ].join('');
+    }
 
     var bootTimer = null;
     var watchTimer = null;
     var observer = null;
+    var themeBound = false;
     var applied = null;
     var built = false;
     var uid = 0;
 
     function style() {
-        if (document.getElementById(STYLE_ID)) return;
+        var existing = document.getElementById(STYLE_ID);
+        if (existing) existing.remove();
         var s = document.createElement('style');
         s.id = STYLE_ID;
-        s.textContent = CSS;
+        s.textContent = cssText();
         document.head.appendChild(s);
     }
 
@@ -71,9 +116,7 @@
         } catch (e) { return {}; }
     }
 
-    function save(s) {
-        GM_setValue(STORE_KEY, JSON.stringify(s));
-    }
+    function save(s) { GM_setValue(STORE_KEY, JSON.stringify(s)); }
 
     function get(userId) {
         var s = store();
@@ -107,9 +150,7 @@
 
         var clear = ['background', 'background-image', 'background-color',
                      'background-size', 'background-position', 'background-repeat'];
-        for (var i = 0; i < clear.length; i++) {
-            t.style.removeProperty(clear[i]);
-        }
+        for (var i = 0; i < clear.length; i++) t.style.removeProperty(clear[i]);
 
         if (bg) {
             if (isSolid(bg)) {
@@ -208,7 +249,7 @@
         none.className = 'nx-chip none';
         none.dataset.key = '__none__';
         none.title = 'None';
-        none.textContent = '✕';
+        none.textContent = '\u2715';
         none.addEventListener('click', function () {
             set(uid, null);
             applied = null;
@@ -311,10 +352,7 @@
         });
 
         urlInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                commitUrl();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); commitUrl(); }
         });
 
         function closeSubpanels() {
@@ -355,9 +393,34 @@
         build();
     }
 
+    function onThemeChange() {
+        style();
+        applied = null;
+        tick();
+    }
+
+    function onStorage(e) {
+        if (e.key === 'rbx_theme_v1') onThemeChange();
+    }
+
+    function bindTheme() {
+        if (themeBound) return;
+        themeBound = true;
+        window.addEventListener('storage', onStorage);
+        window.addEventListener('octane-theme-change', onThemeChange);
+    }
+
+    function unbindTheme() {
+        if (!themeBound) return;
+        themeBound = false;
+        window.removeEventListener('storage', onStorage);
+        window.removeEventListener('octane-theme-change', onThemeChange);
+    }
+
     window.NX.features.background = {
         apply: function () {
             style();
+            bindTheme();
             tick();
 
             var n = 0;
@@ -380,6 +443,7 @@
             if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
             if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
             if (observer) { observer.disconnect(); observer = null; }
+            unbindTheme();
 
             var row = document.getElementById(ROW_ID);
             if (row) row.remove();
