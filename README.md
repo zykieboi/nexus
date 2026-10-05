@@ -12,6 +12,10 @@
 
 <p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you (admin deleted tho, so old). Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
 
+<h2>ASAP:</h2>
+
+<p>If site isn't working, loading (rendering) or page isn't responding error, please contact me ASAP. It's probably from the extension's source code.</p>
+
 <h2>Installation</h2>
 
 <p>1. Install <a href="https://www.tampermonkey.net/">Tampermonkey</a> or
