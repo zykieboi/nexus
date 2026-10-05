@@ -3542,6 +3542,10 @@
                 desc: 'Apply a custom font to the whole site.',
                 type: 'select'
             },
+            tradeValues: {
+                cat: 'features', label: 'Trade Compare',
+                desc: 'Compare your trade with how many rap, value and procent.'
+            },
             inventorySearch: {
                 cat: 'features', label: 'Inventory Search',
                 desc: 'Adds a search bar to your inventory.'
