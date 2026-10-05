@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.9.1
+// @version      1.0.9.2
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -213,6 +213,7 @@
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
+        if (s.get('tradeArrows') && f.tradeArrows) f.tradeArrows.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -222,10 +223,12 @@
         if (isFrame) {
             var fb = window.NX.features.background;
             var ub = window.NX.features.userBadge;
+            var ta = window.NX.features.tradeArrows;
             var fs = window.NX.settings;
             if (!fs) return;
             if (fs.get('background') && fb) fb.apply();
             if (fs.get('userBadge') && ub) ub.apply();
+            if (fs.get('tradeArrows') && ta) ta.apply();
             return;
         }
 
@@ -240,6 +243,7 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
+        if (s.get('tradeArrows') && f.tradeArrows) f.tradeArrows.apply();
     }
 
     var tries = 0;
