@@ -213,7 +213,7 @@
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
-        if (s.get('tradeArrows') && f.tradeArrows) f.tradeArrows.apply();
+        if (s.get('tradeArrows') && f.tradeArrows) f.tradeValues.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -243,7 +243,7 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
-        if (s.get('tradeArrows') && f.tradeArrows) f.tradeArrows.apply();
+        if (s.get('tradeArrows') && f.tradeArrows) f.tradeValues.apply();
     }
 
     var tries = 0;
