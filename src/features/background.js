@@ -32,35 +32,17 @@
     function themeVars() {
         if (dark()) {
             return {
-                chipBorder: 'rgba(255,255,255,.25)',
-                chipHover: '#fff',
-                chipInk: '#ddd',
-                noneBg: '#2a2a2a',
-                noneInk: '#bbb',
-                customBg: '#222',
-                inputBg: '#1a1a1a',
-                inputBorder: '#333',
-                inputInk: '#eee',
-                inputFocus: '#666',
-                btnBg: '#222',
-                btnHover: '#2a2a2a',
-                orInk: '#888'
+                chipBorder: 'rgba(255,255,255,.25)', chipHover: '#fff', chipInk: '#ddd',
+                noneBg: '#2a2a2a', noneInk: '#bbb', customBg: '#222',
+                inputBg: '#1a1a1a', inputBorder: '#333', inputInk: '#eee', inputFocus: '#666',
+                btnBg: '#222', btnHover: '#2a2a2a', orInk: '#888'
             };
         }
         return {
-            chipBorder: 'rgba(0,0,0,.25)',
-            chipHover: '#000',
-            chipInk: '#333',
-            noneBg: '#e6e6e6',
-            noneInk: '#555',
-            customBg: '#e0e0e0',
-            inputBg: '#ffffff',
-            inputBorder: '#c7cbce',
-            inputInk: '#232527',
-            inputFocus: '#0a84ff',
-            btnBg: '#f2f4f5',
-            btnHover: '#e4e8ec',
-            orInk: '#7a7d80'
+            chipBorder: 'rgba(0,0,0,.25)', chipHover: '#000', chipInk: '#333',
+            noneBg: '#e6e6e6', noneInk: '#555', customBg: '#e0e0e0',
+            inputBg: '#ffffff', inputBorder: '#c7cbce', inputInk: '#232527', inputFocus: '#0a84ff',
+            btnBg: '#f2f4f5', btnHover: '#e4e8ec', orInk: '#7a7d80'
         };
     }
 
@@ -99,13 +81,19 @@
     var applied = null;
     var built = false;
     var uid = 0;
+    var running = false;
 
     function style() {
+        var text = cssText();
         var existing = document.getElementById(STYLE_ID);
-        if (existing) existing.remove();
+        if (existing) {
+            if (existing.textContent === text) return;
+            existing.textContent = text;
+            return;
+        }
         var s = document.createElement('style');
         s.id = STYLE_ID;
-        s.textContent = cssText();
+        s.textContent = text;
         document.head.appendChild(s);
     }
 
@@ -115,14 +103,11 @@
             return typeof raw === 'string' ? JSON.parse(raw) : (raw || {});
         } catch (e) { return {}; }
     }
-
     function save(s) { GM_setValue(STORE_KEY, JSON.stringify(s)); }
-
     function get(userId) {
         var s = store();
         return (s.byUser && s.byUser[String(userId)]) || null;
     }
-
     function set(userId, bg) {
         var s = store();
         if (!s.byUser) s.byUser = {};
@@ -130,14 +115,11 @@
         else delete s.byUser[String(userId)];
         save(s);
     }
-
     function isCustom(bg) { return !!bg && bg.indexOf('url(') === 0; }
-
     function isSolid(bg) {
         if (!bg || bg.indexOf('url(') === 0 || bg.indexOf('gradient(') !== -1) return false;
         return bg.charAt(0) === '#' || bg.indexOf('rgb') === 0 || bg.indexOf('hsl') === 0;
     }
-
     function readUid() {
         var p = new URLSearchParams(location.search);
         return parseInt(p.get('userId'), 10) || 0;
@@ -147,11 +129,9 @@
         if (applied === bg) return;
         var t = document.querySelector('.avatar-back');
         if (!t) return;
-
         var clear = ['background', 'background-image', 'background-color',
                      'background-size', 'background-position', 'background-repeat'];
         for (var i = 0; i < clear.length; i++) t.style.removeProperty(clear[i]);
-
         if (bg) {
             if (isSolid(bg)) {
                 t.style.setProperty('background-color', bg, 'important');
@@ -189,7 +169,6 @@
         if (!uid) return;
 
         var cs = getComputedStyle(redraw);
-
         var row = document.createElement('div');
         row.id = ROW_ID;
         row.style.color      = cs.color;
@@ -207,7 +186,6 @@
         edit.className = 'nx-edit';
         edit.innerHTML = '<a class="text-link">Edit</a>';
         row.appendChild(edit);
-
         var editLink = edit.querySelector('a');
 
         var panel = document.createElement('div');
@@ -259,21 +237,17 @@
         });
         chipRow.appendChild(none);
         chips.push(none);
-
         panel.appendChild(chipRow);
 
         var colorBox = document.createElement('div');
         colorBox.className = 'nx-subpanel';
-
         var colorInput = document.createElement('input');
         colorInput.type = 'color';
         colorInput.value = '#1a1a2e';
-
         var colorSet = document.createElement('button');
         colorSet.type = 'button';
         colorSet.className = 'nx-btn';
         colorSet.textContent = 'Set';
-
         colorBox.appendChild(colorInput);
         colorBox.appendChild(colorSet);
         panel.appendChild(colorBox);
@@ -329,7 +303,6 @@
             urlInput.value = '';
             imgBox.classList.remove('open');
         }
-
         fileInput.addEventListener('change', function () {
             var f = fileInput.files && fileInput.files[0];
             if (!f) return;
@@ -345,12 +318,7 @@
             };
             r.readAsDataURL(f);
         });
-
-        urlSet.addEventListener('click', function (e) {
-            e.preventDefault();
-            commitUrl();
-        });
-
+        urlSet.addEventListener('click', function (e) { e.preventDefault(); commitUrl(); });
         urlInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') { e.preventDefault(); commitUrl(); }
         });
@@ -359,12 +327,10 @@
             colorBox.classList.remove('open');
             imgBox.classList.remove('open');
         }
-
         pickerChip.addEventListener('click', function () {
             var open = colorBox.classList.toggle('open');
             if (open) { imgBox.classList.remove('open'); colorInput.focus(); }
         });
-
         customChip.addEventListener('click', function () {
             var open = imgBox.classList.toggle('open');
             if (open) { colorBox.classList.remove('open'); urlInput.focus(); }
@@ -381,7 +347,6 @@
 
         redraw.parentNode.insertBefore(row, redraw.nextSibling);
         built = true;
-
         var state = { chips: chips, pickerChip: pickerChip, customChip: customChip };
         paint(state);
     }
@@ -398,10 +363,7 @@
         applied = null;
         tick();
     }
-
-    function onStorage(e) {
-        if (e.key === 'rbx_theme_v1') onThemeChange();
-    }
+    function onStorage(e) { if (e.key === 'rbx_theme_v1') onThemeChange(); }
 
     function bindTheme() {
         if (themeBound) return;
@@ -409,7 +371,6 @@
         window.addEventListener('storage', onStorage);
         window.addEventListener('octane-theme-change', onThemeChange);
     }
-
     function unbindTheme() {
         if (!themeBound) return;
         themeBound = false;
@@ -419,6 +380,9 @@
 
     window.NX.features.background = {
         apply: function () {
+            if (running) return;
+            running = true;
+
             style();
             bindTheme();
             tick();
@@ -432,25 +396,19 @@
                 }
             }, 100);
 
-            observer = new MutationObserver(function () {
+            watchTimer = setInterval(function () {
                 if (!built) tick();
-            });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
-
-            watchTimer = setInterval(tick, 1500);
+            }, 1500);
         },
         teardown: function () {
+            running = false;
             if (bootTimer) { clearInterval(bootTimer); bootTimer = null; }
             if (watchTimer) { clearInterval(watchTimer); watchTimer = null; }
-            if (observer) { observer.disconnect(); observer = null; }
             unbindTheme();
-
             var row = document.getElementById(ROW_ID);
             if (row) row.remove();
-
             var s = document.getElementById(STYLE_ID);
             if (s) s.remove();
-
             applied = null;
             built = false;
         }
