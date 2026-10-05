@@ -213,7 +213,7 @@
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
-        if (s.get('tradeArrows') && f.tradeArrows) f.tradeValues.apply();
+        if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -223,12 +223,12 @@
         if (isFrame) {
             var fb = window.NX.features.background;
             var ub = window.NX.features.userBadge;
-            var ta = window.NX.features.tradeArrows;
+            var tv = window.NX.features.tradeValues;
             var fs = window.NX.settings;
             if (!fs) return;
             if (fs.get('background') && fb) fb.apply();
             if (fs.get('userBadge') && ub) ub.apply();
-            if (fs.get('tradeArrows') && ta) ta.apply();
+            if (fs.get('tradeValues') && tv) tv.apply();
             return;
         }
 
@@ -243,7 +243,7 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
-        if (s.get('tradeArrows') && f.tradeArrows) f.tradeValues.apply();
+        if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
     }
 
     var tries = 0;
