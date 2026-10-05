@@ -10,13 +10,20 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: bundle-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -25,11 +32,23 @@ jobs:
       - name: Build bundle
         run: node build.js
 
-      - name: Verify bundle is committed
+      - name: Commit and push if changed
         run: |
-          if ! git diff --quiet -- build/bundle.js; then
-            echo "::error::build/bundle.js is out of date. Run 'node build.js' locally and commit the result."
-            git --no-pager diff --stat -- build/bundle.js
-            exit 1
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add build/bundle.js
+          if git diff --staged --quiet; then
+            echo "no changes to commit"
+            exit 0
           fi
-          echo "bundle.js is up to date"
+          git commit -m "build: regenerate bundle [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push; then
+              echo "pushed"
+              exit 0
+            fi
+            echo "push rejected, rebasing and retrying (attempt $i)"
+            git pull --rebase --autostash origin main || true
+          done
+          echo "::error::push failed after retries"
+          exit 1
