@@ -38,7 +38,7 @@ if u lwk wanna test new features or wanna look what im working on, click <a href
 
 <h2>Settings</h2>
 
-<p>Click the <strong>Nexus</strong> container in the sidebar navigation on any page. The settings opens with every feature listed and a toggle for each one. Changes save immediately.
+NOW MOVED TO https://octane.wtf/my/account/
 </p>
 
 
