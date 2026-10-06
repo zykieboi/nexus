@@ -8,6 +8,16 @@
 
 </div>
 
+<h2>Official Group</h2>
+
+To be notified about new updates for Nexus, please join the group on Octane.
+
+Click the Octane logo to join the official group!
+
+<a href="https://octane.wtf/groups/548/Nexus-Octane-Extension">
+  <img src="https://octane.wtf/img/octane-icon.png?v=1" alt="Nexus - Octane Extension" height="100">
+</a>
+
 <h2>Privacy</h2>
 
 <p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you (admin deleted tho, so old). Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
