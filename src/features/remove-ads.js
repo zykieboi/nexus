@@ -1,4 +1,4 @@
-(function() {
+(function () {
     'use strict';
 
     window.NX = window.NX || {};
@@ -8,20 +8,22 @@
 
     var CSS = [
         '.abp,',
-        '[class*="abp-"],',
-        '[class*="leaderboard-abp"],',
-        '[class*="right-abp"],',
-        '[class*="skyscraper-abp"],',
-        '.adWrapper-0-2-106,',
-        '[class*="adWrapper-"],',
-        '[class*="ad-"],',
-        '[class*="Ad-"],',
-        '[id*="ad-"],',
-        '[id*="ad_"],',
-        '[id$="-Abp"],',
+        '[class^="abp-"],',
+        '[class*=" abp-"],',
+        '[class^="leaderboard-abp"],',
+        '[class*=" leaderboard-abp"],',
+        '[class^="right-abp"],',
+        '[class*=" right-abp"],',
+        '[class^="skyscraper-abp"],',
+        '[class*=" skyscraper-abp"],',
+        '[class^="adWrapper-"],',
+        '[class*=" adWrapper-"],',
         '[id^="Leaderboard-Abp"],',
         '[id^="Skyscraper-Abp"],',
         '[id^="Banner-Abp"],',
+        '[id$="-Abp"],',
+        '[id^="ad-"],',
+        '[id$="-ad-slot"],',
         'iframe[data-ad-slot],',
         'iframe[data-js-adtype="iframead"],',
         'iframe[src*="/user-sponsorship/"]',
@@ -68,12 +70,12 @@
     var scanner = null;
 
     window.NX.features.removeAds = {
-        apply: function() {
+        apply: function () {
             style();
             killAds();
             if (!scanner) scanner = setInterval(killAds, 400);
         },
-        teardown: function() {
+        teardown: function () {
             var s = document.getElementById(STYLE_ID);
             if (s) s.remove();
             if (scanner) { clearInterval(scanner); scanner = null; }
