@@ -274,7 +274,9 @@
     }
 
     function isAccountPage() {
-        return location.pathname === '/my/account' || location.pathname === '/my/settings';
+    return location.pathname === '/my/account'
+        || location.pathname === '/my/settings'
+        || location.pathname === '/theme2020/setting';
     }
 
     function isSettingsPage() {
