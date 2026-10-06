@@ -48,15 +48,13 @@ if u lwk wanna test new features or wanna look what im working on, click <a href
 
 <h2>Settings</h2>
 
-NOW MOVED TO https://octane.wtf/my/account/
-</p>
+<p>NOW MOVED TO <a href="https://octane.wtf/my/account/">https://octane.wtf/my/account/</a></p>
+
+<a href="https://octane.wtf/my/account/">
+  <img src="https://github.com/zykieboi/nexus/blob/main/img/settings.png?raw=true" alt="Settings" width="400">
+</a>
 
 
 <h2>Credits</h2>
 <p><a href="https://github.com/zykieboi/nexus/blob/main/src/features/oldroblox.js">Roblox 2019L Theme</a> by @bosketi</p>
-
-<p>Built by <a href="https://github.com/zykieboi">Zyk</a>.</p>
-
-<a href="https://discord.com/users/1415706751415750819">
-  <img src="https://images-ext-1.discordapp.net/external/OAzOL3Hw84LuBIpsKwf7UqloFRW2a4ridhNsj9Lo4LM/%3Fsize%3D1024/https/cdn.discordapp.com/avatars/1415706751415750819/72bc51bc81f6aefa4f5fbdb5ad4f25eb.png?format=webp&quality=lossless&width=640&height=80" width="75" style="border-radius:75%">
-</a>
+And me
