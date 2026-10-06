@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.9.7
+// @version      1.0.9.9
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=8
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=9
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
@@ -147,7 +147,7 @@
 
         var a = document.createElement('a');
         a.className = 'rbx-tab-heading';
-        a.href = '/my/account';
+        a.href = '#';
         var span = document.createElement('span');
         span.className = 'font-caption-header';
         span.textContent = 'Nexus';
@@ -274,9 +274,10 @@
     }
 
     function isAccountPage() {
-    return location.pathname === '/my/account'
-        || location.pathname === '/my/settings'
-        || location.pathname === '/theme2020/setting';
+        var p = location.pathname;
+        return p === '/my/account'
+            || p === '/my/settings'
+            || p === '/theme2020/setting';
     }
 
     function isSettingsPage() {
@@ -312,6 +313,7 @@
         if (!isSettingsPage()) return;
 
         ensureTab();
+        observeMenu();
 
         if (consumeReopen()) { openNexus(); return; }
 
@@ -361,6 +363,8 @@
     function tick() {
         var isFrame = location.pathname.indexOf('/theme2020/') === 0;
 
+        panelTick();
+
         if (isFrame) {
             var fb = window.NX.features.background;
             var ub = window.NX.features.userBadge;
@@ -372,9 +376,6 @@
             if (fs.get('tradeValues') && tv) tv.apply();
             return;
         }
-
-        panelTick();
-        observeMenu();
 
         var f = window.NX.features;
         var s = window.NX.settings;
