@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Nexus - NX
+// @name         Nexus
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.1.2
+// @version      1.0.9.9
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,11 +16,10 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=6
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=9
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
-
 (function () {
     'use strict';
 
@@ -29,9 +28,17 @@
     window.NX.ui = window.NX.ui || {};
     window.NX.role = null;
 
-    var ADMIN_HASH = '#nexus-admin';
     var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
     var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
+
+    var TAB_ID = 'nx-tab';
+    var TAB_CONTENT_HIDE_CLASS = 'nx-hiding';
+    var HEADER_FLAG = 'data-nx-swapped';
+    var REOPEN_KEY = 'nx_reopen';
+    var BASE_TITLE = null;
+
+    var nxOpen = false;
+    var reopenConsumed = false;
 
     HOSTS.forEach(function (host) {
         GM_xmlhttpRequest({
@@ -120,81 +127,216 @@
     }
     window.NX.refreshRole = refreshRole;
 
-    function sidebarList() {
-        return document.querySelector('#left-navigation-container .left-col-list')
-            || document.querySelector('.left-col-list');
+    function accountStyle() {
+        if (document.getElementById('nx-account-style')) return;
+        var s = document.createElement('style');
+        s.id = 'nx-account-style';
+        s.textContent = [
+            '#settings-container .tab-content.' + TAB_CONTENT_HIDE_CLASS + ' > [ui-view]{display:none}',
+            '#settings-container .tab-content.' + TAB_CONTENT_HIDE_CLASS + '{overflow:visible!important;height:auto!important;max-height:none!important}',
+            '#settings-container:has(.tab-content.' + TAB_CONTENT_HIDE_CLASS + '){overflow:visible!important;height:auto!important;max-height:none!important}',
+            '#' + TAB_ID + '{cursor:pointer}'
+        ].join('');
+        (document.head || document.documentElement).appendChild(s);
     }
 
-    function groupsItem(list) {
-        var links = list.querySelectorAll('a');
-        for (var i = 0; i < links.length; i++) {
-            if (links[i].getAttribute('href') === '/groups') {
-                return links[i].closest('li');
-            }
-        }
-        return null;
-    }
-
-    function makeItem(id, icon, label, href, onClick) {
+    function makeTabLi() {
         var li = document.createElement('li');
+        li.id = TAB_ID;
+        li.className = 'menu-option';
+
         var a = document.createElement('a');
-        a.className = 'dynamic-overflow-container text-nav';
-        a.id = id;
-        a.href = href || '/#';
-
-        var wrap = document.createElement('div');
-        var ic = document.createElement('span');
-        ic.className = icon;
-        wrap.appendChild(ic);
-
-        var txt = document.createElement('span');
-        txt.className = 'font-header-2 dynamic-ellipsis-item';
-        txt.textContent = label;
-
-        a.appendChild(wrap);
-        a.appendChild(txt);
-
-        if (onClick) {
-            a.addEventListener('click', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                onClick();
-            }, true);
-        }
-
+        a.className = 'rbx-tab-heading';
+        a.href = '#';
+        var span = document.createElement('span');
+        span.className = 'font-caption-header';
+        span.textContent = 'Nexus';
+        a.appendChild(span);
         li.appendChild(a);
+
+        li.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            try { sessionStorage.removeItem(REOPEN_KEY); } catch (err) {}
+            openNexus();
+        }, true);
+
         return li;
     }
 
-    function injectSidebar() {
-        var list = sidebarList();
-        if (!list) return;
-        var anchor = groupsItem(list);
-        if (!anchor) return;
+    function ensureTab() {
+        var list = document.getElementById('vertical-menu');
+        if (!list) return false;
+        if (document.getElementById(TAB_ID)) return true;
+        list.appendChild(makeTabLi());
+        return true;
+    }
 
-        if (!document.getElementById('nav-nexus')) {
-            var nexus = makeItem('nav-nexus', 'icon-nav-blog', 'Nexus', '/#', function () {
-                window.NX.ui.modal.build();
+    function markActive() {
+        var list = document.getElementById('vertical-menu');
+        if (!list) return;
+        requestAnimationFrame(function () {
+            list.querySelectorAll('.menu-option').forEach(function (li) {
+                if (li.id === TAB_ID) li.classList.add('active');
+                else li.classList.remove('active');
             });
-            anchor.parentNode.insertBefore(nexus, anchor.nextSibling);
+        });
+    }
+
+    function clearActive() {
+        var tab = document.getElementById(TAB_ID);
+        if (tab) tab.classList.remove('active');
+    }
+
+    function setTitle() {
+        if (BASE_TITLE === null) BASE_TITLE = document.title;
+        document.title = BASE_TITLE + ' — Nexus';
+    }
+
+    function restoreTitle() {
+        if (BASE_TITLE !== null) document.title = BASE_TITLE;
+    }
+
+    function swapHeader() {
+        var h1 = document.querySelector('.user-account-header');
+        if (!h1) return;
+        if (h1.getAttribute(HEADER_FLAG) === '1') return;
+        h1.setAttribute(HEADER_FLAG, '1');
+        h1.setAttribute('data-nx-original', h1.textContent);
+        h1.textContent = 'My Nexus Settings';
+    }
+
+    function restoreHeader() {
+        var h1 = document.querySelector('.user-account-header');
+        if (!h1) return;
+        if (h1.getAttribute(HEADER_FLAG) !== '1') return;
+        var orig = h1.getAttribute('data-nx-original');
+        if (orig) h1.textContent = orig;
+        h1.removeAttribute(HEADER_FLAG);
+        h1.removeAttribute('data-nx-original');
+    }
+
+    function ensurePanel() {
+        var tabContent = document.querySelector('#settings-container .tab-content');
+        if (!tabContent) return null;
+
+        var existing = document.getElementById('nx-panel');
+        if (existing && existing.parentNode === tabContent) return existing;
+
+        if (existing) existing.remove();
+        if (!window.NX.ui.settingsPage || typeof window.NX.ui.settingsPage.build !== 'function') return null;
+
+        var panel = window.NX.ui.settingsPage.build();
+        tabContent.appendChild(panel);
+        return panel;
+    }
+
+    function openNexus() {
+        nxOpen = true;
+
+        var tabContent = document.querySelector('#settings-container .tab-content');
+        if (!tabContent) return;
+
+        var panel = ensurePanel();
+        if (!panel) return;
+
+        tabContent.classList.add(TAB_CONTENT_HIDE_CLASS);
+        panel.classList.add('nx-active');
+
+        ensureTab();
+        markActive();
+        setTitle();
+        swapHeader();
+    }
+
+    function closeNexus() {
+        nxOpen = false;
+
+        var tabContent = document.querySelector('#settings-container .tab-content');
+        if (tabContent) tabContent.classList.remove(TAB_CONTENT_HIDE_CLASS);
+        var panel = document.getElementById('nx-panel');
+        if (panel) panel.classList.remove('nx-active');
+        clearActive();
+        restoreTitle();
+        restoreHeader();
+    }
+
+    function purgeNexusPanel() {
+        nxOpen = false;
+        var panel = document.getElementById('nx-panel');
+        if (panel) panel.remove();
+        var tab = document.getElementById(TAB_ID);
+        if (tab) tab.remove();
+        var tabContent = document.querySelector('#settings-container .tab-content');
+        if (tabContent) tabContent.classList.remove(TAB_CONTENT_HIDE_CLASS);
+        restoreTitle();
+        restoreHeader();
+    }
+
+    function isAccountPage() {
+        var p = location.pathname;
+        return p === '/my/account'
+            || p === '/my/settings'
+            || p === '/theme2020/setting';
+    }
+
+    function isSettingsPage() {
+        return isAccountPage() && !!document.getElementById('vertical-menu');
+    }
+
+    document.addEventListener('click', function (e) {
+        var li = e.target.closest && e.target.closest('#vertical-menu .menu-option');
+        if (!li) return;
+        if (li.id === TAB_ID) return;
+        try { sessionStorage.removeItem(REOPEN_KEY); } catch (err) {}
+        closeNexus();
+    }, true);
+
+    function consumeReopen() {
+        if (reopenConsumed) return false;
+        var flag;
+        try { flag = sessionStorage.getItem(REOPEN_KEY); } catch (e) {}
+        if (flag !== '1') { reopenConsumed = true; return false; }
+        try { sessionStorage.removeItem(REOPEN_KEY); } catch (e) {}
+        reopenConsumed = true;
+        return true;
+    }
+
+    function panelTick() {
+        accountStyle();
+
+        if (!isAccountPage()) {
+            if (document.getElementById(TAB_ID) || document.getElementById('nx-panel')) purgeNexusPanel();
+            return;
         }
 
-        var r = window.NX.role;
-        var isAdmin = r === 'admin' || r === 'dev' || r === 'moderator';
+        if (!isSettingsPage()) return;
 
-        if (isAdmin && !document.getElementById('nav-nexus-admin')) {
-            var admin = makeItem('nav-nexus-admin', 'icon-nav-group', 'Nexus Admin',
-                '/home' + ADMIN_HASH);
-            var nexusBtn = document.getElementById('nav-nexus');
-            if (nexusBtn && nexusBtn.parentNode) {
-                nexusBtn.parentNode.insertAdjacentElement('afterend', admin);
+        ensureTab();
+        observeMenu();
+
+        if (consumeReopen()) { openNexus(); return; }
+
+        if (nxOpen) {
+            var tabContent = document.querySelector('#settings-container .tab-content');
+            var panel = document.getElementById('nx-panel');
+            if (!panel || panel.parentNode !== tabContent) {
+                var p = ensurePanel();
+                if (p && tabContent) {
+                    tabContent.classList.add(TAB_CONTENT_HIDE_CLASS);
+                    p.classList.add('nx-active');
+                }
             }
         }
+    }
 
-        if (!isAdmin) {
-            var stale = document.getElementById('nav-nexus-admin');
-            if (stale) stale.remove();
-        }
+    function observeMenu() {
+        var list = document.getElementById('vertical-menu');
+        if (!list || list.__nxWatched) return;
+        list.__nxWatched = true;
+        new MutationObserver(function () {
+            if (!document.getElementById(TAB_ID)) ensureTab();
+        }).observe(list, { childList: true });
     }
 
     function applyAll() {
@@ -210,6 +352,7 @@
         if (s.get('customLogo') && f.customLogo) f.customLogo.apply();
         if (s.get('roblox2019') && f.roblox2019) f.roblox2019.apply();
         if (s.get('hideChat') && f.hideChat) f.hideChat.apply();
+        if (s.get('customFont') && f.customFont) f.customFont.apply();
         if (s.get('nexusPanel') && f.nexusPanel) f.nexusPanel.apply();
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
@@ -219,6 +362,8 @@
 
     function tick() {
         var isFrame = location.pathname.indexOf('/theme2020/') === 0;
+
+        panelTick();
 
         if (isFrame) {
             var fb = window.NX.features.background;
@@ -232,8 +377,6 @@
             return;
         }
 
-        injectSidebar();
-
         var f = window.NX.features;
         var s = window.NX.settings;
         if (!f || !s) return;
@@ -243,8 +386,6 @@
         if (s.get('rap') && f.rap) f.rap.apply();
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
-        if (s.get('background') && f.background) f.background.apply();
-        if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
         if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
     }
 
