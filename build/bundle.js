@@ -3700,357 +3700,292 @@
 })();
 
 /* src/ui/modal.js */
-(function() {
+(function () {
     'use strict';
 
     window.NX = window.NX || {};
     window.NX.ui = window.NX.ui || {};
 
-    var STYLE_ID = 'nx-modal-theme-style';
+    var VERSION = (function () {
+        try {
+            if (typeof GM_info !== 'undefined' && GM_info.script && GM_info.script.version) {
+                return 'v' + GM_info.script.version;
+            }
+        } catch (e) {}
+        return 'v1.0';
+    })();
 
-    function dark() {
-        try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
-        catch (e) { return false; }
+    var PANEL_ID = 'nx-panel';
+    var STYLE_ID = 'nx-panel-style';
+
+    var CATS = [
+        { id: 'visual',   label: 'Visual' },
+        { id: 'features', label: 'Features' }
+    ];
+
+    var OPTS = {
+        roblox2019:      { cat: 'visual',   label: 'Roblox 2019L Theme',       desc: 'Makes Octane look like Roblox back in 2019.' },
+        background:      { cat: 'visual',   label: 'Custom Avatar Background', desc: 'Set custom backgrounds behind your avatar.' },
+        hideAlert:       { cat: 'visual',   label: 'Hide Alert',               desc: 'Hides the alert banner under the navigation bar.' },
+        hideChat:        { cat: 'visual',   label: 'Hide Chat',                desc: 'Hides chat across the site.' },
+        customLogo:      { cat: 'visual',   label: 'Custom Logo',              desc: 'Replace the navbar logo with your own image.' },
+        customFont:      { cat: 'visual',   label: 'Custom Font',              desc: 'Apply a custom font to the whole site.', type: 'select' },
+        tradeValues:     { cat: 'features', label: 'Trade Compare',            desc: 'Compare your trade with RAP, value and percentage.' },
+        inventorySearch: { cat: 'features', label: 'Inventory Search',         desc: 'Adds a search bar to your inventory.' },
+        bulkUnfriend:    { cat: 'features', label: 'Bulk Unfriend',            desc: 'Select multiple friends and remove them at once.' },
+        rap:             { cat: 'features', label: 'RAP on Profile',           desc: 'Shows total RAP next to profile stats.' },
+        removeAds:       { cat: 'features', label: 'Remove Ads',               desc: 'Hides all advertisement banners across the site.' }
+    };
+
+    var DEFAULT_FONTS = [
+        { id: 'default', label: 'Default' },
+        { id: 'inter', label: 'Inter' },
+        { id: 'roboto', label: 'Roboto' },
+        { id: 'opensans', label: 'Open Sans' },
+        { id: 'lato', label: 'Lato' },
+        { id: 'montserrat', label: 'Montserrat' },
+        { id: 'poppins', label: 'Poppins' },
+        { id: 'source-sans', label: 'Source Sans Pro' },
+        { id: 'nunito', label: 'Nunito' },
+        { id: 'ubuntu', label: 'Ubuntu' },
+        { id: 'comic-neue', label: 'Comic Neue' },
+        { id: 'jetbrains-mono', label: 'JetBrains Mono' },
+        { id: 'fira-code', label: 'Fira Code' },
+        { id: 'courier-prime', label: 'Courier Prime' },
+        { id: 'gotham', label: 'Gotham' }
+    ];
+
+    function readLS(k) { try { return localStorage.getItem('nx_' + k); } catch (e) { return null; } }
+    function writeLS(k, v) { try { localStorage.setItem('nx_' + k, v); } catch (e) {} }
+
+    function panelSettings() {
+        var fallback = {
+            get: function (k) { return readLS(k) === '1'; },
+            set: function (k, v) { writeLS(k, v ? '1' : '0'); },
+            getString: function (k, d) { var v = readLS(k); return v == null ? d : v; },
+            setString: function (k, v) { writeLS(k, v); }
+        };
+        var s = window.NX.settings;
+        if (!s) return fallback;
+        return {
+            get: function (k) {
+                var v = s.get(k);
+                if (v === undefined || v === null) v = fallback.get(k);
+                return v;
+            },
+            set: function (k, v) {
+                if (typeof s.set === 'function') s.set(k, v);
+                fallback.set(k, v);
+            },
+            getString: function (k, d) {
+                if (typeof s.getString === 'function') return s.getString(k, d);
+                return fallback.getString(k, d);
+            },
+            setString: function (k, v) {
+                if (typeof s.setString === 'function') s.setString(k, v);
+                fallback.setString(k, v);
+            }
+        };
     }
 
-    function style() {
-        var old = document.getElementById(STYLE_ID);
-        if (old) old.remove();
-        var d = dark();
+    function injectStyle() {
+        if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
         s.id = STYLE_ID;
-        if (d) {
-            s.textContent = [
-                '#nx-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);',
-                'z-index:999999;display:flex;align-items:center;justify-content:center}',
-                '#nx-modal{background:#232527;color:#e0e0e0;border:1px solid #343638;',
-                'border-radius:12px;width:90%;max-width:520px;max-height:78vh;',
-                'font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,0.5);',
-                'display:flex;flex-direction:column;overflow:hidden}',
-                '#nx-modal .nx-header{display:flex;align-items:flex-start;',
-                'justify-content:space-between;padding:22px 26px 14px;',
-                'border-bottom:1px solid #343638;flex-shrink:0}',
-                '#nx-modal .title-block{display:flex;flex-direction:column}',
-                '#nx-modal h2{margin:0;font-size:22px;font-weight:600;color:#fff}',
-                '#nx-modal .sub{color:#7a7d80;font-size:13px;margin-top:3px}',
-                '#nx-modal .close{font-size:24px;line-height:1;cursor:pointer;',
-                'color:#6a6d70;background:none;border:none;padding:0 4px;margin-top:-2px}',
-                '#nx-modal .close:hover{color:#fff}',
-                '#nx-modal .nx-content{padding:8px 26px 4px;overflow-y:auto;flex:1}',
-                '#nx-modal .nx-content::-webkit-scrollbar{width:8px}',
-                '#nx-modal .nx-content::-webkit-scrollbar-track{background:transparent}',
-                '#nx-modal .nx-content::-webkit-scrollbar-thumb{background:#3a3d40;border-radius:4px}',
-                '#nx-modal .nx-content::-webkit-scrollbar-thumb:hover{background:#4a4d50}',
-                '.nx-cat{font-size:12px;font-weight:600;text-transform:uppercase;',
-                'letter-spacing:0.7px;color:#7a7d80;margin:20px 0 6px;padding-bottom:6px;',
-                'border-bottom:1px solid #2f3133}',
-                '.nx-cat.first{margin-top:12px}',
-                '.nx-row{display:flex;align-items:flex-start;justify-content:space-between;',
-                'padding:11px 10px;gap:16px;border-radius:6px}',
-                '.nx-row:hover{background:#2a2c2e}',
-                '.nx-row-text{flex:1;min-width:0}',
-                '.nx-row-text .nx-label{font-size:14px;font-weight:500;color:#e8e8e8;display:block}',
-                '.nx-row-text .nx-desc{font-size:12px;color:#85888b;display:block;',
-                'margin-top:3px;line-height:1.45}',
-                '.nx-toggle{position:relative;width:40px;height:22px;flex-shrink:0;',
-                'cursor:pointer;margin-top:1px}',
-                '.nx-toggle input{opacity:0;width:0;height:0}',
-                '.nx-toggle .slider{position:absolute;inset:0;background:#3d4043;',
-                'border-radius:22px;transition:background 0.2s}',
-                '.nx-toggle .slider::before{content:"";position:absolute;height:16px;',
-                'width:16px;left:3px;top:3px;background:#c8cacc;border-radius:50%;',
-                'transition:transform 0.2s, background 0.2s}',
-                '.nx-toggle input:checked + .slider{background:#22a24a}',
-                '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
-                '.nx-select{padding:6px 10px;background:#2a2c2e;color:#e8e8e8;',
-                'border:1px solid #3a3d40;border-radius:6px;font-family:inherit;',
-                'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
-                '.nx-select:hover{background:#2f3234}',
-                '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #343638;flex-shrink:0}',
-                '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
-                'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
-                'width:100%;font-family:inherit}',
-                '#nx-modal .save-btn:hover{background:#0a76e0}'
-            ].join('');
-        } else {
-            s.textContent = [
-                '#nx-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);',
-                'z-index:999999;display:flex;align-items:center;justify-content:center}',
-                '#nx-modal{background:#ffffff;color:#232527;border:1px solid #c7cbce;',
-                'border-radius:12px;width:90%;max-width:520px;max-height:78vh;',
-                'font-family:inherit;box-shadow:0 20px 60px rgba(0,0,0,0.25);',
-                'display:flex;flex-direction:column;overflow:hidden}',
-                '#nx-modal .nx-header{display:flex;align-items:flex-start;',
-                'justify-content:space-between;padding:22px 26px 14px;',
-                'border-bottom:1px solid #e1e4e8;flex-shrink:0}',
-                '#nx-modal .title-block{display:flex;flex-direction:column}',
-                '#nx-modal h2{margin:0;font-size:22px;font-weight:600;color:#232527}',
-                '#nx-modal .sub{color:#7a7d80;font-size:13px;margin-top:3px}',
-                '#nx-modal .close{font-size:24px;line-height:1;cursor:pointer;',
-                'color:#6a6d70;background:none;border:none;padding:0 4px;margin-top:-2px}',
-                '#nx-modal .close:hover{color:#000}',
-                '#nx-modal .nx-content{padding:8px 26px 4px;overflow-y:auto;flex:1}',
-                '#nx-modal .nx-content::-webkit-scrollbar{width:8px}',
-                '#nx-modal .nx-content::-webkit-scrollbar-track{background:transparent}',
-                '#nx-modal .nx-content::-webkit-scrollbar-thumb{background:#c7cbce;border-radius:4px}',
-                '#nx-modal .nx-content::-webkit-scrollbar-thumb:hover{background:#b0b5ba}',
-                '.nx-cat{font-size:12px;font-weight:600;text-transform:uppercase;',
-                'letter-spacing:0.7px;color:#7a7d80;margin:20px 0 6px;padding-bottom:6px;',
-                'border-bottom:1px solid #e1e4e8}',
-                '.nx-cat.first{margin-top:12px}',
-                '.nx-row{display:flex;align-items:flex-start;justify-content:space-between;',
-                'padding:11px 10px;gap:16px;border-radius:6px}',
-                '.nx-row:hover{background:#f2f4f5}',
-                '.nx-row-text{flex:1;min-width:0}',
-                '.nx-row-text .nx-label{font-size:14px;font-weight:500;color:#232527;display:block}',
-                '.nx-row-text .nx-desc{font-size:12px;color:#7a7d80;display:block;',
-                'margin-top:3px;line-height:1.45}',
-                '.nx-toggle{position:relative;width:40px;height:22px;flex-shrink:0;',
-                'cursor:pointer;margin-top:1px}',
-                '.nx-toggle input{opacity:0;width:0;height:0}',
-                '.nx-toggle .slider{position:absolute;inset:0;background:#c7cbce;',
-                'border-radius:22px;transition:background 0.2s}',
-                '.nx-toggle .slider::before{content:"";position:absolute;height:16px;',
-                'width:16px;left:3px;top:3px;background:#ffffff;border-radius:50%;',
-                'transition:transform 0.2s, background 0.2s}',
-                '.nx-toggle input:checked + .slider{background:#22a24a}',
-                '.nx-toggle input:checked + .slider::before{transform:translateX(18px);background:#fff}',
-                '.nx-select{padding:6px 10px;background:#fff;color:#232527;',
-                'border:1px solid #c7cbce;border-radius:6px;font-family:inherit;',
-                'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
-                '.nx-select:hover{background:#f2f4f5}',
-                '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #e1e4e8;flex-shrink:0}',
-                '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
-                'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
-                'width:100%;font-family:inherit}',
-                '#nx-modal .save-btn:hover{background:#0a76e0}'
-            ].join('');
-        }
+        s.textContent = [
+            '#' + PANEL_ID + '{display:none;overflow:visible}',
+            '#' + PANEL_ID + '.nx-active{display:block}',
+            '#' + PANEL_ID + ' .nx-section{margin-bottom:28px}',
+            '#' + PANEL_ID + ' .nx-section-header{border-bottom:1px solid #e1e4e8;padding-bottom:8px;margin-bottom:4px}',
+            '#' + PANEL_ID + ' .nx-section-header h3{margin:0;font-size:20px;font-weight:600;color:#232527}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-section-header{border-bottom-color:#3a3d40}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-section-header h3{color:#fff}',
+            '#' + PANEL_ID + ' .nx-row{display:flex;align-items:flex-start;justify-content:space-between;',
+            'padding:14px 0;gap:24px;border-bottom:1px solid #eef0f2}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-row{border-bottom-color:#2c2e30}',
+            '#' + PANEL_ID + ' .nx-row:last-child{border-bottom:none}',
+            '#' + PANEL_ID + ' .nx-row-text{flex:1;min-width:0}',
+            '#' + PANEL_ID + ' .nx-label{display:block;font-size:15px;font-weight:500;color:#232527;margin-bottom:3px}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-label{color:#e8e8e8}',
+            '#' + PANEL_ID + ' .nx-desc{display:block;font-size:13px;color:#7a7d80;line-height:1.5}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-desc{color:#9a9da0}',
+            '#' + PANEL_ID + ' .nx-toggle{position:relative;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}',
+            '#' + PANEL_ID + ' .nx-toggle input{opacity:0;width:0;height:0;position:absolute}',
+            '#' + PANEL_ID + ' .nx-toggle .slider{position:absolute;inset:0;background:#c7cbce;border-radius:24px;transition:background .2s}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-toggle .slider{background:#3d4043}',
+            '#' + PANEL_ID + ' .nx-toggle .slider::before{content:"";position:absolute;height:18px;width:18px;left:3px;top:3px;',
+            'background:#fff;border-radius:50%;transition:transform .2s}',
+            '#' + PANEL_ID + ' .nx-toggle input:checked + .slider{background:#22a24a}',
+            '#' + PANEL_ID + ' .nx-toggle input:checked + .slider::before{transform:translateX(20px)}',
+
+            '#' + PANEL_ID + ' .nx-dropdown{position:relative;flex-shrink:0}',
+            '#' + PANEL_ID + ' .nx-dropdown-btn{display:inline-flex;align-items:center;gap:8px;',
+            'padding:7px 12px;background:#fff;color:#232527;border:1px solid #c7cbce;border-radius:6px;',
+            'font-family:inherit;font-size:14px;cursor:pointer;outline:none;min-width:160px;justify-content:space-between}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-btn{background:#2a2c2e;color:#e8e8e8;border-color:#3a3d40}',
+            '#' + PANEL_ID + ' .nx-dropdown-btn:hover{filter:brightness(1.03)}',
+            '#' + PANEL_ID + ' .nx-dropdown-arrow{flex:none;width:10px;height:10px;',
+            'display:inline-block;transition:transform .15s ease}',
+            '#' + PANEL_ID + ' .nx-dropdown.open .nx-dropdown-arrow{transform:rotate(180deg)}',
+            '#' + PANEL_ID + ' .nx-dropdown-arrow::before{content:"";display:block;width:0;height:0;',
+            'border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid currentColor}',
+            '#' + PANEL_ID + ' .nx-dropdown-menu{position:absolute;top:calc(100% + 4px);right:0;min-width:100%;',
+            'max-height:260px;overflow-y:auto;background:#fff;border:1px solid #c7cbce;border-radius:6px;',
+            'box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:50;padding:4px;display:none;',
+            'font-family:inherit;font-size:14px;',
+            'scrollbar-width:thin;scrollbar-color:#c7cbce transparent}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-menu{background:#2a2c2e;border-color:#3a3d40;',
+            'box-shadow:0 6px 18px rgba(0,0,0,.5);scrollbar-color:#3a3d40 transparent}',
+            '#' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar{width:6px;height:0}',
+            '#' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar-track{background:transparent}',
+            '#' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar-thumb{background:#c7cbce;border-radius:3px}',
+            '#' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar-thumb:hover{background:#b0b5ba}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar-thumb{background:#3a3d40}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-menu::-webkit-scrollbar-thumb:hover{background:#4a4d50}',
+            '#' + PANEL_ID + ' .nx-dropdown.open .nx-dropdown-menu{display:block}',
+            '#' + PANEL_ID + ' .nx-dropdown-item{padding:7px 10px;border-radius:4px;cursor:pointer;',
+            'color:#232527;white-space:nowrap}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-item{color:#e8e8e8}',
+            '#' + PANEL_ID + ' .nx-dropdown-item:hover{background:#f2f4f5}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-item:hover{background:#3a3d40}',
+            '#' + PANEL_ID + ' .nx-dropdown-item.selected{background:#e8f0fe;color:#0a84ff}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-dropdown-item.selected{background:#1f3a5f;color:#6cb2ff}',
+
+            '#' + PANEL_ID + ' .nx-footer{margin-top:32px;padding-top:20px;border-top:1px solid #e1e4e8;',
+            'display:flex;align-items:center}',
+            'html.octane-dark #' + PANEL_ID + ' .nx-footer{border-top-color:#3a3d40}',
+            '#' + PANEL_ID + ' .nx-version{margin-left:auto;font-size:12px;color:#7a7d80}'
+        ].join('');
         (document.head || document.documentElement).appendChild(s);
     }
 
-    function build() {
-        var existing = document.getElementById('nx-overlay');
-        if (existing) existing.remove();
-
-        style();
-
-        var isDev = window.NX.role === 'dev';
-
-        var overlay = document.createElement('div');
-        overlay.id = 'nx-overlay';
-
-        var modal = document.createElement('div');
-        modal.id = 'nx-modal';
-
-        var header = document.createElement('div');
-        header.className = 'nx-header';
-
-        var titleBlock = document.createElement('div');
-        titleBlock.className = 'title-block';
-
-        var title = document.createElement('h2');
-        title.textContent = 'Nexus Settings';
-
-        var sub = document.createElement('div');
-        sub.className = 'sub';
-        sub.textContent = 'Settings are saved automatically';
-
-        titleBlock.appendChild(title);
-        titleBlock.appendChild(sub);
-
-        var close = document.createElement('button');
-        close.className = 'close';
-        close.textContent = '\u00d7';
-        close.onclick = function() { overlay.remove(); };
-
-        header.appendChild(titleBlock);
-        header.appendChild(close);
-
-        var content = document.createElement('div');
-        content.className = 'nx-content';
-
-        var cats = [
-            { id: 'visual', label: 'Visual' },
-            { id: 'features', label: 'Features' },
-            { id: 'optimize', label: 'Optimize' }
-        ];
-
-        var opts = {
-            roblox2019: {
-                cat: 'visual', label: 'Roblox 2019L Theme',
-                desc: 'Makes Octane to look like Roblox back in 2019.'
-            },
-            background: {
-                cat: 'visual', label: 'Custom Avatar Background',
-                desc: 'Lets you set a types of backgrounds behind your avatar.'
-            },
-            hideAlert: {
-                cat: 'visual', label: 'Hide Alert',
-                desc: 'Hides the alert banner under the navigation bar.'
-            },
-            hideChat: {
-                cat: 'visual', label: 'Hide Chat',
-                desc: 'Hides the chat across the site.'
-            },
-            customLogo: {
-                cat: 'visual', label: 'Custom Logo',
-                desc: 'Replace the navbar logo with your own image.'
-            },
-            customFont: {
-                cat: 'visual', label: 'Custom Font',
-                desc: 'Apply a custom font to the whole site.',
-                type: 'select'
-            },
-            tradeValues: {
-                cat: 'features', label: 'Trade Compare',
-                desc: 'Compare your trade with how many rap, value and procent.'
-            },
-            inventorySearch: {
-                cat: 'features', label: 'Inventory Search',
-                desc: 'Adds a search bar to your inventory.'
-            },
-            bulkUnfriend: {
-                cat: 'features', label: 'Bulk Unfriend',
-                desc: 'Select multiple friends and remove them all at once.'
-            },
-            rap: {
-                cat: 'features', label: 'RAP on Profile',
-                desc: 'Shows total RAP next to profile stats.'
-            },
-            removeAds: {
-                cat: 'optimize', label: 'Remove Ads',
-                desc: 'Hides all advertisement banners across the site.'
-            }
-        };
-
-        cats.forEach(function(cat, ci) {
-            var keys = Object.keys(opts).filter(function(k) {
-                if (opts[k].cat !== cat.id) return false;
-                if (opts[k].devOnly && !isDev) return false;
-                return true;
-            });
-            if (!keys.length) return;
-
-            var catEl = document.createElement('div');
-            catEl.className = 'nx-cat';
-            if (ci === 0) catEl.classList.add('first');
-            catEl.textContent = cat.label;
-            content.appendChild(catEl);
-
-            keys.forEach(function(key) {
-                var cfg = opts[key];
-
-                var row = document.createElement('div');
-                row.className = 'nx-row';
-
-                var text = document.createElement('div');
-                text.className = 'nx-row-text';
-
-                var label = document.createElement('span');
-                label.className = 'nx-label';
-                label.textContent = cfg.label;
-
-                var desc = document.createElement('span');
-                desc.className = 'nx-desc';
-                desc.textContent = cfg.desc;
-
-                text.appendChild(label);
-                text.appendChild(desc);
-                row.appendChild(text);
-
-                if (cfg.type === 'select') {
-                    var feat = window.NX.features[key];
-                    var currentId = feat && typeof feat.getFontId === 'function'
-                        ? feat.getFontId()
-                        : 'default';
-
-                    var select = document.createElement('select');
-                    select.className = 'nx-select';
-
-                    var fontList = feat && feat.FONTS ? feat.FONTS : [{ id: 'default', label: 'Default' }];
-                    fontList.forEach(function (f) {
-                        var o = document.createElement('option');
-                        o.value = f.id;
-                        o.textContent = f.label;
-                        select.appendChild(o);
-                    });
-
-                    select.value = currentId;
-
-                    select.addEventListener('change', (function (k) {
-                        return function () {
-                            var f = window.NX.features[k];
-                            if (!f) return;
-                            if (typeof f.setFontId === 'function') {
-                                f.setFontId(this.value);
-                            }
-                            if (this.value !== 'default' && typeof f.apply === 'function') {
-                                f.apply();
-                            }
-                            if (this.value === 'default' && typeof f.teardown === 'function') {
-                                f.teardown();
-                            }
-                        };
-                    })(key));
-
-                    row.appendChild(select);
-                } else {
-                    var on = window.NX.settings.get(key);
-
-                    var toggle = document.createElement('label');
-                    toggle.className = 'nx-toggle';
-
-                    var input = document.createElement('input');
-                    input.type = 'checkbox';
-                    input.checked = on;
-
-                    input.addEventListener('change', (function(k) {
-                        return function() {
-                            window.NX.settings.set(k, this.checked);
-                            var f = window.NX.features[k];
-                            if (!f) return;
-                            if (this.checked) {
-                                if (typeof f.apply === 'function') f.apply();
-                            } else {
-                                if (typeof f.teardown === 'function') f.teardown();
-                            }
-                        };
-                    })(key));
-
-                    var slider = document.createElement('span');
-                    slider.className = 'slider';
-
-                    toggle.appendChild(input);
-                    toggle.appendChild(slider);
-                    row.appendChild(toggle);
-                }
-
-                content.appendChild(row);
-            });
-        });
-
-        var footer = document.createElement('div');
-        footer.className = 'nx-footer';
-
-        var save = document.createElement('button');
-        save.className = 'save-btn';
-        save.textContent = 'Save & Reload';
-        save.onclick = function() { location.reload(); };
-
-        footer.appendChild(save);
-
-        modal.appendChild(header);
-        modal.appendChild(content);
-        modal.appendChild(footer);
-        overlay.appendChild(modal);
-
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        (document.body || document.documentElement).appendChild(overlay);
+    function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
     }
 
-    window.NX.ui.modal = { build: build };
+    function buildToggle(key, cfg) {
+        var row = el('div', 'nx-row');
+        var text = el('div', 'nx-row-text');
+        text.appendChild(el('span', 'nx-label', cfg.label));
+        text.appendChild(el('span', 'nx-desc', cfg.desc));
+        row.appendChild(text);
+
+        var toggle = el('label', 'nx-toggle');
+        var input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = panelSettings().get(key);
+
+        input.addEventListener('change', function () {
+            panelSettings().set(key, input.checked);
+            var f = window.NX.features[key];
+            if (!f) return;
+            if (input.checked && typeof f.apply === 'function') f.apply();
+            else if (!input.checked && typeof f.teardown === 'function') f.teardown();
+        });
+
+        toggle.appendChild(input);
+        toggle.appendChild(el('span', 'slider'));
+        row.appendChild(toggle);
+        return row;
+    }
+
+    function buildDropdown(key, cfg) {
+        var row = el('div', 'nx-row');
+        var text = el('div', 'nx-row-text');
+        text.appendChild(el('span', 'nx-label', cfg.label));
+        text.appendChild(el('span', 'nx-desc', cfg.desc));
+        row.appendChild(text);
+
+        var f = window.NX.features[key];
+        var list = (f && f.FONTS && f.FONTS.length) ? f.FONTS : DEFAULT_FONTS;
+        var currentId = (f && typeof f.getFontId === 'function')
+            ? f.getFontId()
+            : panelSettings().getString(key + 'Id', 'default');
+        var current = list.filter(function (o) { return o.id === currentId; })[0] || list[0];
+
+        var wrap = el('div', 'nx-dropdown');
+
+        var btn = el('button', 'nx-dropdown-btn');
+        btn.type = 'button';
+        var labelSpan = el('span', 'nx-dropdown-label', current.label);
+        var arrow = el('span', 'nx-dropdown-arrow');
+        btn.appendChild(labelSpan);
+        btn.appendChild(arrow);
+        wrap.appendChild(btn);
+
+        var menu = el('div', 'nx-dropdown-menu');
+        list.forEach(function (opt) {
+            var item = el('div', 'nx-dropdown-item' + (opt.id === current.id ? ' selected' : ''), opt.label);
+            item.addEventListener('click', function (e) {
+                e.stopPropagation();
+                panelSettings().setString(key + 'Id', opt.id);
+                var feat = window.NX.features[key];
+                if (feat) {
+                    if (typeof feat.setFontId === 'function') feat.setFontId(opt.id);
+                    if (opt.id !== 'default' && typeof feat.apply === 'function') feat.apply();
+                    if (opt.id === 'default' && typeof feat.teardown === 'function') feat.teardown();
+                }
+                labelSpan.textContent = opt.label;
+                Array.prototype.forEach.call(menu.children, function (c) { c.classList.remove('selected'); });
+                item.classList.add('selected');
+                wrap.classList.remove('open');
+            });
+            menu.appendChild(item);
+        });
+        wrap.appendChild(menu);
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            wrap.classList.toggle('open');
+        });
+
+        document.addEventListener('click', function (ev) {
+            if (wrap.contains(ev.target)) return;
+            wrap.classList.remove('open');
+        });
+
+        row.appendChild(wrap);
+        return row;
+    }
+
+    function build() {
+        injectStyle();
+
+        var existing = document.getElementById(PANEL_ID);
+        if (existing) existing.remove();
+
+        var page = el('div');
+        page.id = PANEL_ID;
+
+        CATS.forEach(function (cat) {
+            var keys = Object.keys(OPTS).filter(function (k) { return OPTS[k].cat === cat.id; });
+            if (!keys.length) return;
+
+            var section = el('div', 'nx-section');
+            var header = el('div', 'nx-section-header');
+            header.appendChild(el('h3', '', cat.label));
+            section.appendChild(header);
+
+            keys.forEach(function (key) {
+                var cfg = OPTS[key];
+                section.appendChild(cfg.type === 'select' ? buildDropdown(key, cfg) : buildToggle(key, cfg));
+            });
+
+            page.appendChild(section);
+        });
+
+        var footer = el('div', 'nx-footer');
+        footer.appendChild(el('span', 'nx-version', 'Nexus ' + VERSION));
+        page.appendChild(footer);
+
+        return page;
+    }
+
+    window.NX.ui.settingsPage = {
+        build: build,
+        version: VERSION
+    };
 })();
