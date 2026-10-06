@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.9.2
+// @version      1.0.9.3
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=4
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=5
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
@@ -173,7 +173,9 @@
 
         if (!document.getElementById('nav-nexus')) {
             var nexus = makeItem('nav-nexus', 'icon-nav-blog', 'Nexus', '/#', function () {
-                window.NX.ui.modal.build();
+                if (window.NX.ui && window.NX.ui.modal && typeof window.NX.ui.modal.build === 'function') {
+                    window.NX.ui.modal.build();
+                }
             });
             anchor.parentNode.insertBefore(nexus, anchor.nextSibling);
         }
