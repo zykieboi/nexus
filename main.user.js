@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.9.6
+// @version      1.0.9.7
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=7
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=8
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
@@ -28,7 +28,6 @@
     window.NX.ui = window.NX.ui || {};
     window.NX.role = null;
 
-    var ADMIN_HASH = '#nexus-admin';
     var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
     var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
 
@@ -312,9 +311,6 @@
 
         ensureTab();
 
-        var list = document.getElementById('vertical-menu');
-        if (!list || list.children.length === 0) return;
-
         if (consumeReopen()) { openNexus(); return; }
 
         if (nxOpen) {
@@ -328,6 +324,15 @@
                 }
             }
         }
+    }
+
+    function observeMenu() {
+        var list = document.getElementById('vertical-menu');
+        if (!list || list.__nxWatched) return;
+        list.__nxWatched = true;
+        new MutationObserver(function () {
+            if (!document.getElementById(TAB_ID)) ensureTab();
+        }).observe(list, { childList: true });
     }
 
     function applyAll() {
@@ -367,6 +372,7 @@
         }
 
         panelTick();
+        observeMenu();
 
         var f = window.NX.features;
         var s = window.NX.settings;
@@ -428,6 +434,4 @@
         boot();
     }
     setTimeout(boot, 1200);
-
-    window.NX.ui.settingsPage = window.NX.ui.settingsPage || {};
 })();
