@@ -3705,7 +3705,6 @@
     window.NX.ui = window.NX.ui || {};
 
     var STYLE_ID = 'nx-modal-theme-style';
-    var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
 
     function dark() {
         try { return localStorage.getItem('rbx_theme_v1') === 'dark'; }
@@ -3766,7 +3765,6 @@
                 'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
                 '.nx-select:hover{background:#2f3234}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #343638;flex-shrink:0}',
-                '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
                 'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
                 'width:100%;font-family:inherit}',
@@ -3820,7 +3818,6 @@
                 'font-size:13px;cursor:pointer;outline:none;min-width:140px;flex-shrink:0}',
                 '.nx-select:hover{background:#f2f4f5}',
                 '#nx-modal .nx-footer{padding:14px 26px 20px;border-top:1px solid #e1e4e8;flex-shrink:0}',
-                '#nx-modal .nx-footer .nx-users{font-size:12px;color:#7a7d80;text-align:center;margin-bottom:8px}',
                 '#nx-modal .save-btn{padding:10px 24px;background:#0a84ff;color:#fff;',
                 'border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;',
                 'width:100%;font-family:inherit}',
@@ -4033,26 +4030,6 @@
 
         var footer = document.createElement('div');
         footer.className = 'nx-footer';
-
-        var status = document.createElement('div');
-        status.className = 'nx-users';
-        status.textContent = 'Users: …';
-        footer.appendChild(status);
-
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: WORKER + '/api/nexus/count',
-            timeout: 5000,
-            onload: function (res) {
-                try {
-                    status.textContent = 'Users: ' + JSON.parse(res.responseText).count;
-                } catch (e) {
-                    status.textContent = 'Users: —';
-                }
-            },
-            onerror: function () { status.textContent = 'Users: —'; },
-            ontimeout: function () { status.textContent = 'Users: —'; }
-        });
 
         var save = document.createElement('button');
         save.className = 'save-btn';
