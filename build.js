@@ -23,6 +23,7 @@ const FILES = [
     'src/features/background.js',
     'src/features/UserBadge.js',
     'src/features/tradeValues.js',
+    'src/features/itemOwners.js',
     'src/ui/modal.js'
 ];
 
