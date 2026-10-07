@@ -1369,14 +1369,11 @@
 (function () {
     'use strict';
 
-    if (window.top !== window.self) return;
-
     window.NX = window.NX || {};
     window.NX.features = window.NX.features || {};
 
     var PANEL_ID = 'nx-bulk-panel';
     var STYLE_ID = 'nx-bulk-style';
-    var CARD_FLAG = 'data-nx-bulk';
     var CSRF_KEY = 'nx_csrf_bulk';
 
     function userFromUrl() {
@@ -1386,15 +1383,9 @@
         return p.get('userId') || p.get('viewerId');
     }
 
-    function friendsIframe() {
-        var main = document.querySelector('.main-0-2-8');
-        if (!main) return null;
-        return main.querySelector('iframe[src*="/theme2020/users/"]');
-    }
-
-    function onFriendsTab() {
-        if (!/\/users\/\d+\/friends/.test(location.pathname)) return false;
-        return !!friendsIframe();
+    function onFriendsPage() {
+        return /\/users\/\d+\/friends/.test(location.pathname)
+            && !!document.querySelector('.friends-content .container-header');
     }
 
     function getCsrf() {
@@ -1432,22 +1423,23 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:relative;display:flex;align-items:center;gap:12px;',
-            'padding:10px 16px;font-family:inherit;font-size:14px;box-sizing:border-box;',
-            'background:#f2f4f5;border-bottom:1px solid #c7cbce;flex-wrap:wrap;}',
-            'html.octane-dark #' + PANEL_ID + '{background:#1c1e20;border-bottom-color:#3a3d40;}',
-            '#' + PANEL_ID + ' .count{color:#6a6d70;font-size:13px;}',
-            'html.octane-dark #' + PANEL_ID + ' .count{color:#7a7d80;}',
-            '#' + PANEL_ID + ' button{padding:6px 14px;font-size:13px;border-radius:4px;',
+            '#' + PANEL_ID + '{display:flex;align-items:center;gap:10px;',
+            'margin:8px 0 12px;font-family:inherit;font-size:14px;box-sizing:border-box;flex-wrap:wrap;}',
+            '#' + PANEL_ID + ' button{padding:5px 12px;font-size:13px;border-radius:4px;',
             'border:1px solid #c7cbce;background:#fff;color:#232527;cursor:pointer;',
-            'font-family:inherit;}',
+            'font-family:inherit;line-height:1.2;}',
             '#' + PANEL_ID + ' button:hover{background:#e8eef5;}',
             '#' + PANEL_ID + ' button.danger{border-color:#d9534f;color:#d9534f;}',
             '#' + PANEL_ID + ' button.danger:hover{background:#d9534f;color:#fff;}',
             '#' + PANEL_ID + ' button:disabled{opacity:0.5;cursor:not-allowed;}',
+            '#' + PANEL_ID + ' .count{color:#6a6d70;font-size:13px;white-space:nowrap;}',
+            'html.octane-dark #' + PANEL_ID + ' .count{color:#7a7d80;}',
             'html.octane-dark #' + PANEL_ID + ' button{background:transparent;',
             'border-color:#3a3d40;color:#e0e0e0;}',
-            'html.octane-dark #' + PANEL_ID + ' button:hover{background:#2a2c2e;}'
+            'html.octane-dark #' + PANEL_ID + ' button:hover{background:#2a2c2e;}',
+            '.avatar-card .nx-bulk-check{position:absolute;top:6px;left:6px;z-index:3;',
+            'width:20px;height:20px;cursor:pointer;margin:0;}',
+            '.avatar-card.nx-bulk-selected{outline:2px solid #0d6efd;outline-offset:-2px;}'
         ].join('');
         document.head.appendChild(s);
     }
@@ -1464,26 +1456,35 @@
         return Object.keys(state.selected).filter(function (k) { return state.selected[k]; }).length;
     }
 
+    function containerHeader() {
+        return document.querySelector('.friends-content .container-header');
+    }
+
     function renderPanel() {
+        var header = containerHeader();
+        if (!header) return;
+
         var old = document.getElementById(PANEL_ID);
         if (old) old.remove();
-        if (!state.loaded) return;
 
-        var main = document.querySelector('.main-0-2-8');
-        if (!main) return;
-        var iframe = friendsIframe();
-        if (!iframe) return;
+        if (!state.loaded) return;
 
         style();
 
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
 
+        var count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = state.friends.length + ' friends \u2022 ' + selectedCount() + ' selected';
+        panel.appendChild(count);
+
         var selectAll = document.createElement('button');
         selectAll.textContent = 'Select All';
         selectAll.disabled = state.busy || !state.friends.length;
         selectAll.addEventListener('click', function () {
             state.friends.forEach(function (f) { state.selected[f.id] = true; });
+            syncChecks();
             renderPanel();
         });
         panel.appendChild(selectAll);
@@ -1493,14 +1494,10 @@
         deselectAll.disabled = state.busy || !state.friends.length;
         deselectAll.addEventListener('click', function () {
             state.selected = {};
+            syncChecks();
             renderPanel();
         });
         panel.appendChild(deselectAll);
-
-        var count = document.createElement('span');
-        count.className = 'count';
-        count.textContent = state.friends.length + ' friends \u2022 ' + selectedCount() + ' selected';
-        panel.appendChild(count);
 
         var unfriend = document.createElement('button');
         unfriend.className = 'danger';
@@ -1516,69 +1513,65 @@
             panel.appendChild(st);
         }
 
-        // Insert as a sibling of the iframe, not absolutely positioned.
-        // This puts it in normal flow right above the iframe, no overlay.
-        var iframeParent = iframe.parentNode;
-        if (iframeParent) {
-            iframeParent.insertBefore(panel, iframe);
-        }
+        header.parentNode.insertBefore(panel, header.nextSibling);
     }
 
-    // Inject a checkbox overlay into each friend card in the iframe.
-    function paintCards() {
-        var iframe = friendsIframe();
-        if (!iframe) return;
-        var doc;
-        try { doc = iframe.contentDocument; } catch (e) { return; }
-        if (!doc) return;
+    function cards() {
+        return document.querySelectorAll('.friends-content .tab-pane.active ul.avatar-cards li.avatar-card,'
+            + ' .friends-content ul.avatar-cards li.avatar-card');
+    }
 
-        // Octane's friend card container. Try a few selectors.
-        var cards = doc.querySelectorAll('.friends-carousel .friend-card, .friend-card, .friends-list li');
-        Array.prototype.forEach.call(cards, function (card) {
-            if (card.getAttribute(CARD_FLAG) === '1') {
-                // already painted, just refresh checked state
-                var box = card.querySelector('.nx-bulk-check');
-                if (box) {
-                    var id = card.getAttribute('data-nx-uid');
-                    if (id) box.checked = !!state.selected[id];
-                }
+    function cardId(card) {
+        if (card.id && /^\d+$/.test(card.id)) return card.id;
+        var link = card.querySelector('a[href*="/users/"]');
+        if (link) {
+            var m = (link.getAttribute('href') || '').match(/\/users\/(\d+)/);
+            if (m) return m[1];
+        }
+        return null;
+    }
+
+    function paintCards() {
+        Array.prototype.forEach.call(cards(), function (card) {
+            var uid = cardId(card);
+            if (!uid) return;
+            card.setAttribute('data-nx-uid', uid);
+
+            var existing = card.querySelector('.nx-bulk-check');
+            if (existing) {
+                existing.checked = !!state.selected[uid];
+                card.classList.toggle('nx-bulk-selected', !!state.selected[uid]);
                 return;
             }
 
-            // Find the user id from a link
-            var link = card.querySelector('a[href*="/users/"]');
-            if (!link) return;
-            var m = (link.getAttribute('href') || '').match(/\/users\/(\d+)/);
-            if (!m) return;
-            var uid = m[1];
-            card.setAttribute('data-nx-uid', uid);
-            card.setAttribute(CARD_FLAG, '1');
+            if (getComputedStyle(card).position === 'static') {
+                card.style.position = 'relative';
+            }
 
-            // Build checkbox
-            var wrap = doc.createElement('label');
-            wrap.style.cssText = 'position:absolute;top:6px;left:6px;z-index:3;'
-                + 'display:flex;align-items:center;justify-content:center;'
-                + 'width:22px;height:22px;background:#fff;border:1px solid #c7cbce;'
-                + 'border-radius:4px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);'
-                + 'margin:0;padding:0;line-height:1';
-
-            var box = doc.createElement('input');
+            var box = document.createElement('input');
             box.type = 'checkbox';
             box.className = 'nx-bulk-check';
-            box.style.cssText = 'margin:0;cursor:pointer';
             box.checked = !!state.selected[uid];
-
-            // Card needs relative positioning to anchor our absolute checkbox
-            var pos = doc.defaultView.getComputedStyle(card).position;
-            if (pos === 'static') card.style.position = 'relative';
-
-            box.addEventListener('change', function () {
+            box.addEventListener('change', function (e) {
+                e.stopPropagation();
                 state.selected[uid] = box.checked;
+                card.classList.toggle('nx-bulk-selected', box.checked);
                 renderPanel();
             });
+            box.addEventListener('click', function (e) { e.stopPropagation(); });
 
-            wrap.appendChild(box);
-            card.appendChild(wrap);
+            card.appendChild(box);
+            if (state.selected[uid]) card.classList.add('nx-bulk-selected');
+        });
+    }
+
+    function syncChecks() {
+        Array.prototype.forEach.call(cards(), function (card) {
+            var uid = card.getAttribute('data-nx-uid') || cardId(card);
+            if (!uid) return;
+            var box = card.querySelector('.nx-bulk-check');
+            if (box) box.checked = !!state.selected[uid];
+            card.classList.toggle('nx-bulk-selected', !!state.selected[uid]);
         });
     }
 
@@ -1610,8 +1603,7 @@
         state.status = 'Working\u2026';
         renderPanel();
 
-        var ok = 0, fail = 0;
-        var i = 0;
+        var ok = 0, fail = 0, i = 0;
 
         function next() {
             if (i >= ids.length) {
@@ -1646,7 +1638,7 @@
 
     window.NX.features.bulkUnfriend = {
         apply: function () {
-            if (!onFriendsTab()) {
+            if (!onFriendsPage()) {
                 var old = document.getElementById(PANEL_ID);
                 if (old) old.remove();
                 return;
@@ -1660,26 +1652,22 @@
                 state.status = '';
                 state.loaded = false;
                 loadFriends();
-            } else if (!document.getElementById(PANEL_ID)) {
+            } else if (!state.loaded) {
                 loadFriends();
+            } else if (!document.getElementById(PANEL_ID)) {
+                renderPanel();
+                paintCards();
             }
 
             if (!scanner) {
                 scanner = setInterval(function () {
-                    if (!onFriendsTab()) {
+                    if (!onFriendsPage()) {
                         var old = document.getElementById(PANEL_ID);
                         if (old) old.remove();
                         return;
                     }
-
-                    // Re-paint cards each tick to catch newly rendered ones
-                    // from scrolling or lazy loading.
                     paintCards();
-
-                    // Ensure the toolbar exists
-                    if (!document.getElementById(PANEL_ID) && state.loaded) {
-                        renderPanel();
-                    }
+                    if (!document.getElementById(PANEL_ID) && state.loaded) renderPanel();
                 }, 500);
             }
         },
@@ -1687,6 +1675,12 @@
             if (scanner) { clearInterval(scanner); scanner = null; }
             var old = document.getElementById(PANEL_ID);
             if (old) old.remove();
+            Array.prototype.forEach.call(document.querySelectorAll('.nx-bulk-check'), function (n) {
+                n.remove();
+            });
+            Array.prototype.forEach.call(document.querySelectorAll('.nx-bulk-selected'), function (n) {
+                n.classList.remove('nx-bulk-selected');
+            });
             state.loaded = false;
         }
     };
