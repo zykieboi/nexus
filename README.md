@@ -24,7 +24,7 @@ Click the Octane logo to join the official group!
 
 <h2>ASAP:</h2>
 
-<p>If site isn't working, loading (rendering) or page isn't responding error, please contact me ASAP. It's probably from the extension's source code.</p>
+<p>Also please let the features you toggled, load just in time. It may take some seconds. If site isn't working, loading (rendering) or page isn't responding error, please contact me ASAP. It's probably from the extension's source code.</p>
 
 <h2>Installation</h2>
 
