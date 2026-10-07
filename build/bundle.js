@@ -1366,7 +1366,7 @@
 })();
 
 /* src/features/bulk-unfriend.js */
-(function() {
+(function () {
     'use strict';
 
     if (window.top !== window.self) return;
@@ -1376,6 +1376,7 @@
 
     var PANEL_ID = 'nx-bulk-panel';
     var STYLE_ID = 'nx-bulk-style';
+    var CARD_FLAG = 'data-nx-bulk';
     var CSRF_KEY = 'nx_csrf_bulk';
 
     function userFromUrl() {
@@ -1393,11 +1394,7 @@
 
     function onFriendsTab() {
         if (!/\/users\/\d+\/friends/.test(location.pathname)) return false;
-        var f = friendsIframe();
-        if (!f) return false;
-        var href;
-        try { href = f.contentWindow.location.href; } catch (e) { return true; }
-        return /#!\/friends\b/.test(href) || href.indexOf('#!') === -1;
+        return !!friendsIframe();
     }
 
     function getCsrf() {
@@ -1417,7 +1414,7 @@
         var token = getCsrf();
         if (token) opts.headers['X-CSRF-Token'] = token;
 
-        return fetch(url, opts).then(function(r) {
+        return fetch(url, opts).then(function (r) {
             if (r.status === 403) {
                 var fresh = r.headers.get('x-csrf-token');
                 if (fresh && fresh !== token) {
@@ -1435,12 +1432,12 @@
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
-            '#' + PANEL_ID + '{position:absolute;',
-            'display:inline-flex;align-items:center;gap:12px;padding:0;',
-            'font-family:inherit;font-size:14px;z-index:5;box-sizing:border-box;',
-            'pointer-events:none;}',
-            '#' + PANEL_ID + ' > *{pointer-events:auto;}',
+            '#' + PANEL_ID + '{position:relative;display:flex;align-items:center;gap:12px;',
+            'padding:10px 16px;font-family:inherit;font-size:14px;box-sizing:border-box;',
+            'background:#f2f4f5;border-bottom:1px solid #c7cbce;flex-wrap:wrap;}',
+            'html.octane-dark #' + PANEL_ID + '{background:#1c1e20;border-bottom-color:#3a3d40;}',
             '#' + PANEL_ID + ' .count{color:#6a6d70;font-size:13px;}',
+            'html.octane-dark #' + PANEL_ID + ' .count{color:#7a7d80;}',
             '#' + PANEL_ID + ' button{padding:6px 14px;font-size:13px;border-radius:4px;',
             'border:1px solid #c7cbce;background:#fff;color:#232527;cursor:pointer;',
             'font-family:inherit;}',
@@ -1448,7 +1445,6 @@
             '#' + PANEL_ID + ' button.danger{border-color:#d9534f;color:#d9534f;}',
             '#' + PANEL_ID + ' button.danger:hover{background:#d9534f;color:#fff;}',
             '#' + PANEL_ID + ' button:disabled{opacity:0.5;cursor:not-allowed;}',
-            'html.octane-dark #' + PANEL_ID + ' .count{color:#7a7d80;}',
             'html.octane-dark #' + PANEL_ID + ' button{background:transparent;',
             'border-color:#3a3d40;color:#e0e0e0;}',
             'html.octane-dark #' + PANEL_ID + ' button:hover{background:#2a2c2e;}'
@@ -1465,7 +1461,7 @@
     };
 
     function selectedCount() {
-        return Object.keys(state.selected).filter(function(k) { return state.selected[k]; }).length;
+        return Object.keys(state.selected).filter(function (k) { return state.selected[k]; }).length;
     }
 
     function renderPanel() {
@@ -1479,25 +1475,15 @@
         if (!iframe) return;
 
         style();
-        main.style.position = 'relative';
-
-        var dpr = window.devicePixelRatio || 1;
-        var leftPct = 18 + (1 - dpr) * 35;
-        if (leftPct < 10) leftPct = 10;
-        if (leftPct > 40) leftPct = 40;
 
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
-        panel.style.top = '190px';
-        panel.style.left = leftPct + '%';
-        panel.style.right = 'auto';
-        panel.style.width = 'fit-content';
 
         var selectAll = document.createElement('button');
         selectAll.textContent = 'Select All';
         selectAll.disabled = state.busy || !state.friends.length;
-        selectAll.addEventListener('click', function() {
-            state.friends.forEach(function(f) { state.selected[f.id] = true; });
+        selectAll.addEventListener('click', function () {
+            state.friends.forEach(function (f) { state.selected[f.id] = true; });
             renderPanel();
         });
         panel.appendChild(selectAll);
@@ -1505,7 +1491,7 @@
         var deselectAll = document.createElement('button');
         deselectAll.textContent = 'Deselect All';
         deselectAll.disabled = state.busy || !state.friends.length;
-        deselectAll.addEventListener('click', function() {
+        deselectAll.addEventListener('click', function () {
             state.selected = {};
             renderPanel();
         });
@@ -1530,7 +1516,70 @@
             panel.appendChild(st);
         }
 
-        main.appendChild(panel);
+        // Insert as a sibling of the iframe, not absolutely positioned.
+        // This puts it in normal flow right above the iframe, no overlay.
+        var iframeParent = iframe.parentNode;
+        if (iframeParent) {
+            iframeParent.insertBefore(panel, iframe);
+        }
+    }
+
+    // Inject a checkbox overlay into each friend card in the iframe.
+    function paintCards() {
+        var iframe = friendsIframe();
+        if (!iframe) return;
+        var doc;
+        try { doc = iframe.contentDocument; } catch (e) { return; }
+        if (!doc) return;
+
+        // Octane's friend card container. Try a few selectors.
+        var cards = doc.querySelectorAll('.friends-carousel .friend-card, .friend-card, .friends-list li');
+        Array.prototype.forEach.call(cards, function (card) {
+            if (card.getAttribute(CARD_FLAG) === '1') {
+                // already painted, just refresh checked state
+                var box = card.querySelector('.nx-bulk-check');
+                if (box) {
+                    var id = card.getAttribute('data-nx-uid');
+                    if (id) box.checked = !!state.selected[id];
+                }
+                return;
+            }
+
+            // Find the user id from a link
+            var link = card.querySelector('a[href*="/users/"]');
+            if (!link) return;
+            var m = (link.getAttribute('href') || '').match(/\/users\/(\d+)/);
+            if (!m) return;
+            var uid = m[1];
+            card.setAttribute('data-nx-uid', uid);
+            card.setAttribute(CARD_FLAG, '1');
+
+            // Build checkbox
+            var wrap = doc.createElement('label');
+            wrap.style.cssText = 'position:absolute;top:6px;left:6px;z-index:3;'
+                + 'display:flex;align-items:center;justify-content:center;'
+                + 'width:22px;height:22px;background:#fff;border:1px solid #c7cbce;'
+                + 'border-radius:4px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);'
+                + 'margin:0;padding:0;line-height:1';
+
+            var box = doc.createElement('input');
+            box.type = 'checkbox';
+            box.className = 'nx-bulk-check';
+            box.style.cssText = 'margin:0;cursor:pointer';
+            box.checked = !!state.selected[uid];
+
+            // Card needs relative positioning to anchor our absolute checkbox
+            var pos = doc.defaultView.getComputedStyle(card).position;
+            if (pos === 'static') card.style.position = 'relative';
+
+            box.addEventListener('change', function () {
+                state.selected[uid] = box.checked;
+                renderPanel();
+            });
+
+            wrap.appendChild(box);
+            card.appendChild(wrap);
+        });
     }
 
     function loadFriends() {
@@ -1538,13 +1587,14 @@
         if (!userId) return;
 
         request('/apisite/friends/v1/users/' + userId + '/friends?limit=100')
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
                 state.friends = (d && d.data) || [];
                 state.loaded = true;
                 renderPanel();
+                paintCards();
             })
-            .catch(function() {
+            .catch(function () {
                 state.status = 'Failed to load friends';
                 state.loaded = true;
                 renderPanel();
@@ -1552,7 +1602,7 @@
     }
 
     function doUnfriend() {
-        var ids = Object.keys(state.selected).filter(function(k) { return state.selected[k]; });
+        var ids = Object.keys(state.selected).filter(function (k) { return state.selected[k]; });
         if (!ids.length) return;
         if (!confirm('Unfriend ' + ids.length + ' user(s)?')) return;
 
@@ -1575,12 +1625,12 @@
             request('/apisite/friends/v1/users/' + id + '/unfriend', {
                 method: 'POST',
                 body: JSON.stringify({ targetUserId: Number(id) })
-            }).then(function(r) {
+            }).then(function (r) {
                 if (r.ok) ok++; else fail++;
                 state.status = 'Working\u2026 ' + i + '/' + ids.length;
                 renderPanel();
                 setTimeout(next, 1500);
-            }).catch(function() {
+            }).catch(function () {
                 fail++;
                 state.status = 'Working\u2026 ' + i + '/' + ids.length;
                 renderPanel();
@@ -1595,7 +1645,7 @@
     var lastUserId = null;
 
     window.NX.features.bulkUnfriend = {
-        apply: function() {
+        apply: function () {
             if (!onFriendsTab()) {
                 var old = document.getElementById(PANEL_ID);
                 if (old) old.remove();
@@ -1614,16 +1664,26 @@
                 loadFriends();
             }
 
-            if (!scanner) scanner = setInterval(function() {
-                if (onFriendsTab()) {
-                    if (!document.getElementById(PANEL_ID)) loadFriends();
-                } else {
-                    var old = document.getElementById(PANEL_ID);
-                    if (old) old.remove();
-                }
-            }, 400);
+            if (!scanner) {
+                scanner = setInterval(function () {
+                    if (!onFriendsTab()) {
+                        var old = document.getElementById(PANEL_ID);
+                        if (old) old.remove();
+                        return;
+                    }
+
+                    // Re-paint cards each tick to catch newly rendered ones
+                    // from scrolling or lazy loading.
+                    paintCards();
+
+                    // Ensure the toolbar exists
+                    if (!document.getElementById(PANEL_ID) && state.loaded) {
+                        renderPanel();
+                    }
+                }, 500);
+            }
         },
-        teardown: function() {
+        teardown: function () {
             if (scanner) { clearInterval(scanner); scanner = null; }
             var old = document.getElementById(PANEL_ID);
             if (old) old.remove();
