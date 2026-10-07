@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.0.9.9
+// @version      1.1
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=9
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=10
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
@@ -357,6 +357,7 @@
         if (s.get('background') && f.background) f.background.apply();
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
         if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
+        if (s.get('itemOwners') && f.itemOwners) f.itemOwners.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -365,21 +366,19 @@
 
         panelTick();
 
-        if (isFrame) {
-            var fb = window.NX.features.background;
-            var ub = window.NX.features.userBadge;
-            var tv = window.NX.features.tradeValues;
-            var fs = window.NX.settings;
-            if (!fs) return;
-            if (fs.get('background') && fb) fb.apply();
-            if (fs.get('userBadge') && ub) ub.apply();
-            if (fs.get('tradeValues') && tv) tv.apply();
-            return;
-        }
-
         var f = window.NX.features;
         var s = window.NX.settings;
         if (!f || !s) return;
+
+        if (isFrame) {
+            var fb = f.background;
+            var ub = f.userBadge;
+            var tv = f.tradeValues;
+            if (s.get('background') && fb) fb.apply();
+            if (s.get('userBadge') && ub) ub.apply();
+            if (s.get('tradeValues') && tv) tv.apply();
+            return;
+        }
 
         if (s.get('removeAds') && f.removeAds) f.removeAds.apply();
         if (s.get('hideAlert') && f.hideAlert) f.hideAlert.apply();
