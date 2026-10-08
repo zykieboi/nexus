@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.1
+// @version      1.2
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -16,7 +16,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=67
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=11
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -358,6 +358,7 @@
         if (s.get('userBadge') && f.userBadge) f.userBadge.apply();
         if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
         if (s.get('itemOwners') && f.itemOwners) f.itemOwners.apply();
+        if (s.get('quickSearch') && f.quickSearch) f.quickSearch.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -386,6 +387,7 @@
         if (s.get('inventorySearch') && f.inventorySearch) f.inventorySearch.apply();
         if (s.get('bulkUnfriend') && f.bulkUnfriend) f.bulkUnfriend.apply();
         if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
+        if (s.get('quickSearch') && f.quickSearch) f.quickSearch.apply();
     }
 
     var tries = 0;
