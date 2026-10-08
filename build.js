@@ -24,6 +24,7 @@ const FILES = [
     'src/features/UserBadge.js',
     'src/features/tradeValues.js',
     'src/features/itemOwners.js',
+    'src/features/quickSearch.js',
     'src/ui/modal.js'
 ];
 
