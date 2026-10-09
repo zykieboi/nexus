@@ -31,7 +31,8 @@
 
     var CLASS_TO_TYPE_ID = {
         'Shirt': 11,
-        'Pants': 12
+        'Pants': 12,
+        'TShirt': 2
     };
 
     function log() {
@@ -284,12 +285,12 @@
             '  transition:border-color .15s ease,box-shadow .15s ease,background .15s ease;',
             '}',
 
-            '#' + PANEL_ID + ' .nx-types{display:flex;gap:8px}',
+            '#' + PANEL_ID + ' .nx-types{display:flex;gap:6px}',
             '#' + PANEL_ID + ' .nx-types label{',
             '  flex:1;display:inline-flex;align-items:center;justify-content:center;',
-            '  padding:8px 14px;border:1px solid;border-radius:6px;cursor:pointer;',
+            '  padding:8px 10px;border:1px solid;border-radius:6px;cursor:pointer;',
             '  font-family:"Source Sans Pro",Arial,Helvetica,sans-serif;',
-            '  font-size:14px;line-height:20px;font-weight:500;',
+            '  font-size:13px;line-height:18px;font-weight:500;',
             '  transition:border-color .15s ease,background .15s ease,color .15s ease;',
             '  user-select:none;',
             '}',
@@ -400,7 +401,7 @@
         var item = doc.querySelector('Item');
         if (!item) return null;
         var cls = item.getAttribute('class');
-        var tpl = item.querySelector('Content[name="ShirtTemplate"] url, Content[name="PantsTemplate"] url');
+        var tpl = item.querySelector('Content[name="ShirtTemplate"] url, Content[name="PantsTemplate"] url, Content[name="Graphic"] url');
         var templateId = null;
         if (tpl) {
             var m = tpl.textContent.match(/id=(\d+)/);
@@ -568,6 +569,7 @@
             '    <div class="nx-types" id="nx-rblx-types">',
             '      <label data-val="11"><input type="radio" name="nx-rblx-type" value="11">Shirt</label>',
             '      <label data-val="12"><input type="radio" name="nx-rblx-type" value="12">Pants</label>',
+            '      <label data-val="2"><input type="radio" name="nx-rblx-type" value="2">T-Shirt</label>',
             '    </div>',
             '  </div>',
             '</div>',
@@ -748,8 +750,8 @@
                 return parsed;
             })
             .then(function (parsed) {
-                if (parsed.class !== 'Shirt' && parsed.class !== 'Pants') {
-                    throw new Error('This asset is a ' + (parsed.class || 'unknown') + '. Only Shirts and Pants can be imported.');
+                if (parsed.class !== 'Shirt' && parsed.class !== 'Pants' && parsed.class !== 'TShirt') {
+                    throw new Error('This asset is a ' + (parsed.class || 'unknown') + '. Only Shirts, Pants and T-Shirts can be imported.');
                 }
                 if (!parsed.templateId) throw new Error('asset XML did not contain a template ID');
 
