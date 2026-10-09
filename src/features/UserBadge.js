@@ -4,7 +4,6 @@
     'use strict';
 
     var STYLE_ID = 'nx-ub-style';
-    var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
 
     var BADGES = {
         '1043': {
@@ -19,8 +18,6 @@
         'background-position:center center;vertical-align:middle;' +
         'margin-left:-4px;margin-right:0}';
 
-    var reported = false;
-
     function addStyle() {
         if (document.getElementById(STYLE_ID)) return;
         var s = document.createElement('style');
@@ -34,14 +31,6 @@
         if (q) return q;
         var m = location.pathname.match(/\/theme2020\/users\/(\d+)/);
         return m ? m[1] : null;
-    }
-
-    function reportSeen(profile) {
-        if (reported) return;
-        reported = true;
-        var viewer = (window.NX && window.NX.getMeId) ? window.NX.getMeId() : 0;
-        fetch(WORKER + '/api/nexus/badge-seen?profileId=' + profile + '&viewerId=' + viewer)
-            .catch(function () {});
     }
 
     function makeBadge(info, size) {
@@ -72,7 +61,6 @@
         if (existing) {
             existing.style.width = size;
             existing.style.height = size;
-            reportSeen(id);
             return;
         }
 
@@ -81,8 +69,6 @@
 
         if (h3) h3.parentNode.insertBefore(badge, h3);
         else h2.parentNode.insertBefore(badge, h2.nextSibling);
-
-        reportSeen(id);
     }
 
     function scan() {
