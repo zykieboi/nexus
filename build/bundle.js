@@ -4580,7 +4580,7 @@
 })();
 
 /* src/features/rbxlImport.js */
-// src/features/RBLXimport.js
+// src/features/rbxlImport.js
 
 (function () {
     'use strict';
@@ -4611,9 +4611,6 @@
         selfListener: null
     };
 
-    var SHIRT = '11';
-    var PANTS = '12';
-
     var CLASS_TO_TYPE_ID = {
         'Shirt': 11,
         'Pants': 12
@@ -4626,7 +4623,7 @@
     }
 
     function isOn() {
-        return window.NX.settings && window.NX.settings.get('rblxImport');
+        return window.NX.settings && window.NX.settings.get('rbxlImport');
     }
 
     function isDark() {
@@ -5128,25 +5125,6 @@
         });
     }
 
-    function buildRow(label, desc) {
-        var row = document.createElement('div');
-        row.className = 'nx-row-item';
-        var text = document.createElement('div');
-        text.className = 'nx-row-text';
-        var l = document.createElement('span');
-        l.className = 'nx-row-label';
-        l.textContent = label;
-        text.appendChild(l);
-        if (desc) {
-            var d = document.createElement('span');
-            d.className = 'nx-row-desc';
-            d.textContent = desc;
-            text.appendChild(d);
-        }
-        row.appendChild(text);
-        return row;
-    }
-
     function panelHtml() {
         return [
             '<h2 class="nx-title">Import from RBLX</h2>',
@@ -5615,7 +5593,7 @@
         if (state.blobUrl) { URL.revokeObjectURL(state.blobUrl); state.blobUrl = null; }
     }
 
-    window.NX.features.rblxImport = {
+    window.NX.features.rbxlImport = {
         apply: apply,
         teardown: teardown
     };
