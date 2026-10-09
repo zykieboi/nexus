@@ -9,13 +9,11 @@ const OUT = path.join(ROOT, 'build', 'bundle.js');
 const FILES = [
     'src/core/settings.js',
     'src/core/csrf.js',
-    'src/core/server.js',
     'src/features/remove-ads.js',
     'src/features/hide-alert.js',
     'src/features/rap.js',
     'src/features/inventory-search.js',
     'src/features/bulk-unfriend.js',
-    'src/features/announcement.js',
     'src/features/custom-logo.js',
     'src/features/oldroblox.js',
     'src/features/hide-chat.js',
