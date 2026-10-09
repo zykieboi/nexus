@@ -32,7 +32,15 @@
     var CLASS_TO_TYPE_ID = {
         'Shirt': 11,
         'Pants': 12,
-        'TShirt': 2
+        'TShirt': 2,
+        'ShirtGraphic': 2
+    };
+
+    var OK_CLASSES = {
+        'Shirt': 1,
+        'Pants': 1,
+        'TShirt': 1,
+        'ShirtGraphic': 1
     };
 
     function log() {
@@ -401,7 +409,11 @@
         var item = doc.querySelector('Item');
         if (!item) return null;
         var cls = item.getAttribute('class');
-        var tpl = item.querySelector('Content[name="ShirtTemplate"] url, Content[name="PantsTemplate"] url, Content[name="Graphic"] url');
+        var tpl = item.querySelector(
+            'Content[name="ShirtTemplate"] url, ' +
+            'Content[name="PantsTemplate"] url, ' +
+            'Content[name="Graphic"] url'
+        );
         var templateId = null;
         if (tpl) {
             var m = tpl.textContent.match(/id=(\d+)/);
@@ -750,7 +762,7 @@
                 return parsed;
             })
             .then(function (parsed) {
-                if (parsed.class !== 'Shirt' && parsed.class !== 'Pants' && parsed.class !== 'TShirt') {
+                if (!OK_CLASSES[parsed.class]) {
                     throw new Error('This asset is a ' + (parsed.class || 'unknown') + '. Only Shirts, Pants and T-Shirts can be imported.');
                 }
                 if (!parsed.templateId) throw new Error('asset XML did not contain a template ID');
