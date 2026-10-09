@@ -4579,7 +4579,7 @@
     };
 })();
 
-/* src/features/RBLXimport.js */
+/* src/features/rbxlImport.js */
 // src/features/RBLXimport.js
 
 (function () {
@@ -5654,7 +5654,7 @@
         customFont:      { cat: 'visual',   label: 'Custom Font',              desc: 'Apply a custom font to the whole site.', type: 'select' },
         tradeValues:     { cat: 'features', label: 'Trade Compare',            desc: 'Compare your trade with RAP, value and percentage.' },
         itemOwners:      { cat: 'features', label: 'Item Owners',              desc: 'Adds an Owners tab to item pages showing every owner, serial, and acquire date.' },
-        RBLXimport:      { cat: 'features', label: 'Import from ROBLOX',       desc: 'Import your ROBLOX classic clothing to Octane.' },
+        rblxImport:      { cat: 'features', label: 'Import from ROBLOX',       desc: 'Import your ROBLOX classic clothing to Octane.' },
         inventorySearch: { cat: 'features', label: 'Inventory Search',         desc: 'Adds a search bar to your inventory.' },
         quickSearch:     { cat: 'features', label: 'Quick Search',             desc: 'Search users and game results into the search bar at the same time.' },
         bulkUnfriend:    { cat: 'features', label: 'Bulk Unfriend',            desc: 'Select multiple friends and remove them at once.' },
