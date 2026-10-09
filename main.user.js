@@ -18,7 +18,7 @@
 // @connect      roblox.com
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=14
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=15
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
