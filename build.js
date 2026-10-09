@@ -23,6 +23,7 @@ const FILES = [
     'src/features/tradeValues.js',
     'src/features/itemOwners.js',
     'src/features/quickSearch.js',
+    'src/features/RBLXimport.js',
     'src/ui/modal.js'
 ];
 
