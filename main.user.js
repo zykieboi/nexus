@@ -15,7 +15,7 @@
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=12
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=13
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
