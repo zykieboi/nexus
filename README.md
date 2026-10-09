@@ -20,7 +20,7 @@ Click the Octane logo to join the official group!
 
 <h2>Privacy</h2>
 
-<p>Nexus respects your privacy. It does not steal, collect, save, or store your personal information, such as your <code>.ROBLOSECURITY</code> cookie, IP address, passwords, or account details. Nexus only uses what it needs to work and doesn't keep unnecessary information about you (admin deleted tho, so old). Your data isn't sold, shared, or used for tracking. What happens in your browser stays in your browser. - github copilot </p>
+<p>Nexus is 100% open source and runs entirely in your browser. No server, no backend, no telemetry, no analytics. Nothing you do leaves your machine.</p>
 
 <h2>ASAP:</h2>
 
