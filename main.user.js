@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.2
+// @version      1.3
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -12,11 +12,10 @@
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
 // @connect      octane.wtf
-// @connect      nexus-admin.masonreed-exe.workers.dev
 // @connect      tcdn.octane.wtf
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=11
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/main/build/bundle.js?v=12
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/main/main.user.js
 // ==/UserScript==
@@ -28,9 +27,6 @@
     window.NX.ui = window.NX.ui || {};
     window.NX.role = null;
 
-    var WORKER = 'https://nexus-admin.masonreed-exe.workers.dev';
-    var HOSTS = ['octane.wtf', 'nexus-admin.masonreed-exe.workers.dev'];
-
     var TAB_ID = 'nx-tab';
     var TAB_CONTENT_HIDE_CLASS = 'nx-hiding';
     var HEADER_FLAG = 'data-nx-swapped';
@@ -39,15 +35,6 @@
 
     var nxOpen = false;
     var reopenConsumed = false;
-
-    HOSTS.forEach(function (host) {
-        GM_xmlhttpRequest({
-            method: 'HEAD',
-            url: 'https://' + host + '/',
-            timeout: 4000,
-            onerror: function () { GM_setValue('nx_host_fail', host); }
-        });
-    });
 
     function meId() {
         var id = parseInt(localStorage.getItem('nx_me_id') || '0', 10);
@@ -88,42 +75,8 @@
     window.NX.getMeId = meId;
     window.NX.getMeName = meName;
 
-    var pingTimer = null;
-
-    function pingCount() {
-        var id = meId();
-        if (!id) return;
-        GM_xmlhttpRequest({
-            method: 'GET',
-            url: WORKER + '/api/nexus/ping?id=' + id,
-            timeout: 5000
-        });
-    }
-    window.NX.pingCount = pingCount;
-
-    function startPing() {
-        if (pingTimer) return;
-        pingCount();
-        pingTimer = setInterval(function () {
-            if (!document.hidden) pingCount();
-        }, 30000);
-    }
-
-    document.addEventListener('visibilitychange', function () {
-        if (!document.hidden) pingCount();
-    });
-
     function refreshRole() {
-        if (!window.NX.server || typeof window.NX.server.me !== 'function') {
-            return Promise.resolve(null);
-        }
-        return window.NX.server.me().then(function (res) {
-            if (res && res.status === 200 && res.data && res.data.user) {
-                var u = res.data.user;
-                window.NX.role = u.role || (u.isAdmin ? 'admin' : 'user');
-            }
-            return window.NX.role;
-        }).catch(function () { return null; });
+        return Promise.resolve(null);
     }
     window.NX.refreshRole = refreshRole;
 
@@ -428,7 +381,6 @@
         refreshRole().then(function () {
             applyAll();
             tick();
-            startPing();
         });
     }
 
