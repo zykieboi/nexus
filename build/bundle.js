@@ -4596,7 +4596,7 @@
     var HASH = 'rblx';
     var RATE_KEY = 'nx_rblx_last_upload';
     var THEME_KEY = 'rbx_theme_v1';
-    var RATE_LIMIT_MS = 30000;
+    var RATE_LIMIT_MS = 15000;
     var MAX_NAME_LEN = 50;
     var LOG = '[RBLX Import]';
 
