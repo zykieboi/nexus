@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Nexus [TESTER EXTENSION]
 // @namespace    https://github.com/zykieboi/nexus
-// @version      1.4
+// @version      1.5
 // @icon         https://github.com/zykieboi/nexus/blob/main/img/icon.png?raw=true
 // @author       zykieboi
 // @description  Testing stuff :)
@@ -18,7 +18,7 @@
 // @connect      roblox.com
 // @connect      raw.githubusercontent.com
 // @run-at       document-start
-// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=15
+// @require      https://raw.githubusercontent.com/zykieboi/nexus/testing/build/bundle.js?v=15.1
 // @downloadURL  https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // @updateURL    https://raw.githubusercontent.com/zykieboi/nexus/testing/main.user.js
 // ==/UserScript==
@@ -315,7 +315,7 @@
         if (s.get('tradeValues') && f.tradeValues) f.tradeValues.apply();
         if (s.get('itemOwners') && f.itemOwners) f.itemOwners.apply();
         if (s.get('quickSearch') && f.quickSearch) f.quickSearch.apply();
-        if (s.get('rblxImport') && f.rblxImport) f.rblxImport.apply();
+        if (s.get('rbxlImport') && f.rbxlImport) f.rbxlImport.apply();
         if (f.announcement) f.announcement.apply();
     }
 
@@ -332,11 +332,11 @@
             var fb = f.background;
             var ub = f.userBadge;
             var tv = f.tradeValues;
-            var ri = f.rblxImport;
+            var ri = f.rbxlImport;
             if (s.get('background') && fb) fb.apply();
             if (s.get('userBadge') && ub) ub.apply();
             if (s.get('tradeValues') && tv) tv.apply();
-            if (s.get('rblxImport') && ri) ri.apply();
+            if (s.get('rbxlImport') && ri) ri.apply();
             return;
         }
 
