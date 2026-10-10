@@ -4836,6 +4836,10 @@
             '#' + TOAST_ID + '.err{background:#2e1414;color:#f0c8c8;border-left-color:#c4494a}',
 
             '#' + PANEL_ID + '{',
+            '  display:block !important;',
+            '  position:relative !important;',
+            '  visibility:visible !important;',
+            '  opacity:1 !important;',
             '  font-family:"Source Sans Pro",Arial,Helvetica,sans-serif;',
             '  font-size:14px;line-height:20px;',
             '  padding:0 0 24px;',
@@ -5522,29 +5526,61 @@
             });
     }
 
+    function isVisible(el) {
+        if (!el || !el.ownerDocument) return false;
+        var node = el;
+        while (node && node.nodeType === 1) {
+            var cs = node.ownerDocument.defaultView.getComputedStyle(node);
+            if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false;
+            node = node.parentElement;
+        }
+        return true;
+    }
+
     function findContentArea(menuEl) {
         var td = menuEl;
         while (td && td.tagName !== 'TD' && td.tagName !== 'BODY') {
             td = td.parentNode;
         }
-        if (td && td.tagName === 'TD') {
-            var row = td.parentNode;
-            var cells = row ? row.children : [];
-            for (var i = 0; i < cells.length; i++) {
-                if (cells[i] !== td && cells[i].classList && cells[i].classList.contains('content-area')) {
-                    return cells[i];
-                }
+        if (!td || td.tagName !== 'TD') return null;
+
+        var row = td.parentNode;
+        var cells = row ? row.children : [];
+        for (var i = 0; i < cells.length; i++) {
+            if (cells[i] !== td && cells[i].classList && cells[i].classList.contains('content-area')) {
+                return cells[i];
             }
         }
         return null;
     }
 
+    function pickVisibleMenu() {
+        var anchors = document.querySelectorAll('a.tab-item');
+        var candidates = [];
+        for (var i = 0; i < anchors.length; i++) {
+            var a = anchors[i];
+            var href = a.getAttribute('href') || '';
+            if (!/View=11\b/.test(href)) continue;
+            if (!isVisible(a)) continue;
+            candidates.push(a);
+        }
+        return candidates.length ? candidates[0] : null;
+    }
+
     function showPanel(menuEl) {
-        var content = findContentArea(menuEl);
-        if (!content) {
-            log('no content area found');
+        menuEl = menuEl || pickVisibleMenu();
+        if (!menuEl) {
+            log('no visible View=11 menu found');
             return false;
         }
+
+        var content = findContentArea(menuEl);
+        if (!content) {
+            log('no content area found for menu', menuEl);
+            return false;
+        }
+
+        log('showPanel: content area =', content);
 
         state.open = true;
         state.contentEl = content;
@@ -5566,8 +5602,14 @@
 
         panel = buildPanel(state.groupId);
         content.appendChild(panel);
-        panel.style.display = '';
+        panel.style.display = 'block';
+        panel.style.position = 'relative';
+        panel.style.zIndex = '1';
+        panel.style.visibility = 'visible';
+        panel.style.opacity = '1';
         updateRateLimit(panel);
+
+        log('panel appended, content children now:', content.children.length);
         return true;
     }
 
@@ -5605,11 +5647,18 @@
             if (state.open) hidePanel();
             return;
         }
-        if (state.open) return;
+        if (state.open) {
+            log('handleHash: already open');
+            return;
+        }
 
         var btn = document.querySelector('a.' + BUTTON_CLASS);
-        if (!btn) return;
+        if (!btn) {
+            log('handleHash: no button yet');
+            return;
+        }
         if (showPanel(btn)) log('panel opened');
+        else log('panel failed to open');
     }
 
     function addButton() {
@@ -5618,6 +5667,7 @@
             var a = anchors[i];
             var href = a.getAttribute('href') || '';
             if (!/View=11\b/.test(href)) continue;
+            if (!isVisible(a)) continue;
             var menu = a.parentNode;
             if (!menu) continue;
             if (menu.querySelector('a.' + BUTTON_CLASS)) continue;
@@ -5636,6 +5686,7 @@
                 handleHash();
             }, true);
             menu.insertBefore(btn, a);
+            log('button injected next to', a, 'in', menu);
         }
     }
 
