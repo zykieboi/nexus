@@ -4609,7 +4609,8 @@
         observer: null,
         topListener: null,
         selfListener: null,
-        groupId: null
+        groupId: null,
+        initialized: false
     };
 
     var CLASS_TO_TYPE_ID = {
@@ -4633,7 +4634,7 @@
     }
 
     function isOn() {
-        return window.NX.settings && window.NX.settings.get('rbxlImport');
+        return !window.NX.settings || window.NX.settings.get('rbxlImport');
     }
 
     function isDark() {
@@ -4641,7 +4642,8 @@
         try { theme = localStorage.getItem(THEME_KEY) || ''; } catch (e) {}
         if (theme === 'dark') return true;
         if (theme === 'white' || theme === 'light') return false;
-        return document.documentElement.classList.contains('octane-dark');
+        return document.documentElement.classList.contains('octane-dark') ||
+               document.documentElement.classList.contains('dark-theme');
     }
 
     function readCsrf() {
@@ -5052,6 +5054,15 @@
             if (gid && /^\d+$/.test(gid)) return gid;
         }
 
+        try {
+            if (window.top && window.top !== window) {
+                var topPath = window.top.location.pathname.match(/\/develop\/groups\/(\d+)/);
+                if (topPath) return topPath[1];
+                var topQuery = window.top.location.search.match(/[?&]groupId=(\d+)/);
+                if (topQuery) return topQuery[1];
+            }
+        } catch (e) {}
+
         return null;
     }
 
@@ -5070,6 +5081,15 @@
                 if (o && o.textContent) return o.textContent.trim();
             }
         }
+        try {
+            if (window.top && window.top !== window) {
+                var topSel = window.top.document.querySelector('#SelectedGroupId');
+                if (topSel && topSel.value === String(groupId)) {
+                    var topOpt = topSel.options[topSel.selectedIndex];
+                    if (topOpt && topOpt.textContent) return topOpt.textContent.trim();
+                }
+            }
+        } catch (e) {}
         return 'Group ' + groupId;
     }
 
@@ -5619,8 +5639,30 @@
         }
     }
 
+    function shouldRun() {
+        var path = location.pathname;
+        var search = location.search;
+        if (/\/develop(\/|$)/.test(path)) return true;
+        if (/\/develop\/groups(\/|$)/.test(path)) return true;
+        if (search.indexOf('groupId=') > -1) return true;
+        try {
+            if (window.top && window.top !== window) {
+                var tp = window.top.location.pathname;
+                var ts = window.top.location.search;
+                if (/\/develop(\/|$)/.test(tp)) return true;
+                if (/\/develop\/groups(\/|$)/.test(tp)) return true;
+                if (ts.indexOf('groupId=') > -1) return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+
     function apply() {
+        if (state.initialized) return;
         if (!isOn()) return;
+        if (!shouldRun()) return;
+
+        state.initialized = true;
 
         style();
         addButton();
@@ -5635,6 +5677,7 @@
         }
 
         state.observer = new MutationObserver(function () {
+            if (!state.initialized) return;
             addButton();
             if (currentHash() === HASH && !state.open) handleHash();
             else if (currentHash() !== HASH && state.open) hidePanel();
@@ -5665,12 +5708,20 @@
         if (t) t.remove();
 
         if (state.blobUrl) { URL.revokeObjectURL(state.blobUrl); state.blobUrl = null; }
+
+        state.initialized = false;
     }
 
     window.NX.features.rbxlImport = {
         apply: apply,
         teardown: teardown
     };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', apply);
+    } else {
+        apply();
+    }
 })();
 
 /* src/ui/modal.js */
