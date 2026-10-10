@@ -4606,6 +4606,7 @@
         rateTimer: null,
         busy: false,
         contentEl: null,
+        wrapEl: null,
         observer: null,
         topListener: null,
         selfListener: null,
@@ -4843,14 +4844,10 @@
             '#' + TOAST_ID + '.err{background:#2e1414;color:#f0c8c8;border-left-color:#c4494a}',
 
             '#' + PANEL_ID + '{',
-            '  display:block !important;',
-            '  position:relative !important;',
-            '  visibility:visible !important;',
-            '  opacity:1 !important;',
             '  font-family:"Source Sans Pro",Arial,Helvetica,sans-serif;',
             '  font-size:14px;line-height:20px;',
             '  padding:0 0 24px;',
-            '  max-width:640px;',
+            '  box-sizing:border-box;',
             '}',
 
             '#' + PANEL_ID + ' .nx-title{',
@@ -5050,22 +5047,16 @@
         if (queryGroup) return queryGroup[1];
 
         var groupTab = document.getElementById('GroupCreationsTabLink');
-        var isGroupActive = groupTab && groupTab.classList.contains('tab-active');
-        if (!isGroupActive) {
-            var groupContent = document.getElementById('GroupCreationsTab');
-            if (!groupContent || !groupContent.classList.contains('tab-active')) return null;
-        }
-
-        var select = document.querySelector('#SelectedGroupId');
-        if (select && select.value && /^\d+$/.test(select.value)) return select.value;
-
-        var hidden = document.querySelector('#groupId');
-        if (hidden && hidden.value && /^\d+$/.test(hidden.value)) return hidden.value;
-
-        var content = document.querySelector('.BuildPageContent[data-groupid]');
-        if (content) {
-            var gid = content.getAttribute('data-groupid');
-            if (gid && /^\d+$/.test(gid)) return gid;
+        if (groupTab && groupTab.classList.contains('tab-active')) {
+            var select = document.querySelector('#SelectedGroupId');
+            if (select && select.value && /^\d+$/.test(select.value)) return select.value;
+            var hidden = document.querySelector('#groupId');
+            if (hidden && hidden.value && /^\d+$/.test(hidden.value)) return hidden.value;
+            var content = document.querySelector('.BuildPageContent[data-groupid]');
+            if (content) {
+                var gid = content.getAttribute('data-groupid');
+                if (gid && /^\d+$/.test(gid)) return gid;
+            }
         }
 
         return null;
@@ -5490,23 +5481,6 @@
         return true;
     }
 
-    function findContentArea(menuEl) {
-        var td = menuEl;
-        while (td && td.tagName !== 'TD' && td.tagName !== 'BODY') {
-            td = td.parentNode;
-        }
-        if (!td || td.tagName !== 'TD') return null;
-
-        var row = td.parentNode;
-        var cells = row ? row.children : [];
-        for (var i = 0; i < cells.length; i++) {
-            if (cells[i] !== td && cells[i].classList && cells[i].classList.contains('content-area')) {
-                return cells[i];
-            }
-        }
-        return null;
-    }
-
     function pickVisibleMenu() {
         var anchors = document.querySelectorAll('a.tab-item');
         for (var i = 0; i < anchors.length; i++) {
@@ -5528,8 +5502,10 @@
                     if (c.classList && c.classList.contains(PANEL_CLASS)) return;
                     var prev = c.getAttribute('data-nx-prev-display');
                     if (prev === null) return;
-                    c.style.display = prev;
-                    c.removeAttribute('data-nx-prev-display');
+                    if (c.closest('td.content-area')) {
+                        c.style.display = prev;
+                        c.removeAttribute('data-nx-prev-display');
+                    }
                 });
             }
             p.remove();
@@ -5547,16 +5523,20 @@
         menuEl = menuEl || pickVisibleMenu();
         if (!menuEl) return false;
 
-        var content = findContentArea(menuEl);
+        var wrap = menuEl.closest ? menuEl.closest('.BuildPageContent') : null;
+        if (!wrap) return false;
+
+        var content = wrap.querySelector('td.content-area');
         if (!content) return false;
 
         state.open = true;
         state.contentEl = content;
+        state.wrapEl = wrap;
 
         var groupId = detectGroupContext();
         state.groupId = groupId;
 
-        Array.prototype.forEach.call(document.querySelectorAll('a.tab-item'), function (a) {
+        Array.prototype.forEach.call(wrap.querySelectorAll('a.tab-item'), function (a) {
             a.classList.toggle('tab-item-selected', a === menuEl);
         });
 
@@ -5568,7 +5548,26 @@
         });
 
         var panel = buildPanel(groupId);
-        content.appendChild(panel);
+
+        if (getComputedStyle(wrap).position === 'static') {
+            wrap.style.position = 'relative';
+        }
+        wrap.appendChild(panel);
+
+        var wrapRect = wrap.getBoundingClientRect();
+        var contentRect = content.getBoundingClientRect();
+        var pad = 20;
+        panel.style.position = 'absolute';
+        panel.style.top = (contentRect.top - wrapRect.top) + 'px';
+        panel.style.left = (contentRect.left - wrapRect.left + pad) + 'px';
+        panel.style.width = Math.max(280, contentRect.width - pad * 2) + 'px';
+        panel.style.zIndex = '50';
+        panel.style.background = isDark() ? '#232527' : '#f2f4f5';
+        panel.style.padding = pad + 'px';
+        panel.style.display = 'block';
+        panel.style.visibility = 'visible';
+        panel.style.opacity = '1';
+
         updateRateLimit(panel);
         return true;
     }
@@ -5578,6 +5577,7 @@
         if (state.rateTimer) { clearInterval(state.rateTimer); state.rateTimer = null; }
         removeAllPanels();
         state.contentEl = null;
+        state.wrapEl = null;
     }
 
     function currentHash() {
@@ -5644,12 +5644,11 @@
         if (state.lastPath === path) return;
         state.lastPath = path;
 
-        removeAllPanels();
-        removeAllButtons();
-        state.open = false;
-        state.contentEl = null;
-        state.groupId = null;
+        if (state.open) {
+            hidePanel();
+        }
 
+        removeAllButtons();
         addButton();
     }
 
