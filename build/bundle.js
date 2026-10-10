@@ -4634,6 +4634,10 @@
         console.log.apply(console, args);
     }
 
+    function isTopWindow() {
+        try { return window.top === window.self; } catch (e) { return true; }
+    }
+
     function isOn() {
         return !window.NX.settings || window.NX.settings.get('rbxlImport');
     }
@@ -5045,10 +5049,11 @@
         var queryGroup = location.search.match(/[?&]groupId=(\d+)/);
         if (queryGroup) return queryGroup[1];
 
-        var activeTab = document.querySelector('#GroupCreationsTab.tab-active');
-        if (!activeTab) {
-            var tabLink = document.getElementById('GroupCreationsTabLink');
-            if (!tabLink || !tabLink.classList.contains('tab-active')) return null;
+        var groupTab = document.getElementById('GroupCreationsTabLink');
+        var isGroupActive = groupTab && groupTab.classList.contains('tab-active');
+        if (!isGroupActive) {
+            var groupContent = document.getElementById('GroupCreationsTab');
+            if (!groupContent || !groupContent.classList.contains('tab-active')) return null;
         }
 
         var select = document.querySelector('#SelectedGroupId');
@@ -5088,14 +5093,6 @@
         var headers = {};
         if (token) headers['x-csrf-token'] = token;
 
-        log('upload →', {
-            token: token || '(empty)',
-            type: typeId,
-            file: filename,
-            name: assetName,
-            group: groupId || '(personal)'
-        });
-
         return fetch('https://octane.wtf/develop/upload', {
             method: 'POST',
             credentials: 'include',
@@ -5104,7 +5101,6 @@
         }).then(function (r) {
             return r.text().then(function (text) {
                 var fresh = r.headers.get('x-csrf-token') || '';
-                log('upload ←', r.status, text, '| fresh token:', fresh || '(none)');
                 var data;
                 try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
                 return { status: r.status, data: data, raw: text, fresh: fresh, groupId: groupId };
@@ -5374,7 +5370,6 @@
 
         setStatus(status, 'Reading asset…', 'info');
         setProgress(panel, 5, 'Reading asset…');
-        log('start', { url: url, assetId: assetId, group: groupId || '(personal)' });
 
         var typeId = getSelectedType(panel);
 
@@ -5452,7 +5447,7 @@
 
                 if (newId && ctx.finalName && (!serverName || serverName !== ctx.finalName)) {
                     setProgress(panel, 88, 'Saving name…');
-                    return renameAsset(newId, ctx.finalName, typeId, ctx.groupId).then(function (res) {
+                    return renameAsset(newId, ctx.finalName, typeId, ctx.groupId).then(function () {
                         return { out: out, newId: newId, finalName: ctx.finalName, groupId: ctx.groupId };
                     });
                 }
@@ -5473,7 +5468,6 @@
                 updateRateLimit(panel);
             })
             .catch(function (e) {
-                log('error', e);
                 setStatus(status, 'Failed: ' + e.message, 'err');
                 showToast('Import failed: ' + e.message.split('\n')[0], 'err');
                 hideProgress(panel);
@@ -5515,47 +5509,52 @@
 
     function pickVisibleMenu() {
         var anchors = document.querySelectorAll('a.tab-item');
-        var candidates = [];
         for (var i = 0; i < anchors.length; i++) {
             var a = anchors[i];
             var href = a.getAttribute('href') || '';
             if (!/View=11\b/.test(href)) continue;
             if (!isVisible(a)) continue;
-            candidates.push(a);
+            return a;
         }
-        return candidates.length ? candidates[0] : null;
+        return null;
     }
 
     function removeAllPanels() {
-        var panels = document.querySelectorAll('#' + PANEL_ID);
-        Array.prototype.forEach.call(panels, function (p) { p.remove(); });
+        var panels = document.querySelectorAll('#' + PANEL_ID + ', .' + PANEL_CLASS);
+        Array.prototype.forEach.call(panels, function (p) {
+            var parent = p.parentNode;
+            if (parent) {
+                Array.prototype.forEach.call(parent.children, function (c) {
+                    if (c.classList && c.classList.contains(PANEL_CLASS)) return;
+                    var prev = c.getAttribute('data-nx-prev-display');
+                    if (prev === null) return;
+                    c.style.display = prev;
+                    c.removeAttribute('data-nx-prev-display');
+                });
+            }
+            p.remove();
+        });
+    }
 
-        var oldPanels = document.querySelectorAll('.' + PANEL_CLASS);
-        Array.prototype.forEach.call(oldPanels, function (p) { p.remove(); });
+    function removeAllButtons() {
+        var buttons = document.querySelectorAll('a.' + BUTTON_CLASS);
+        Array.prototype.forEach.call(buttons, function (b) { b.remove(); });
     }
 
     function showPanel(menuEl) {
         removeAllPanels();
 
         menuEl = menuEl || pickVisibleMenu();
-        if (!menuEl) {
-            log('no visible View=11 menu found');
-            return false;
-        }
+        if (!menuEl) return false;
 
         var content = findContentArea(menuEl);
-        if (!content) {
-            log('no content area found for menu', menuEl);
-            return false;
-        }
+        if (!content) return false;
 
         state.open = true;
         state.contentEl = content;
 
         var groupId = detectGroupContext();
         state.groupId = groupId;
-
-        log('showPanel: content area =', content, '| groupId =', groupId || '(personal)');
 
         Array.prototype.forEach.call(document.querySelectorAll('a.tab-item'), function (a) {
             a.classList.toggle('tab-item-selected', a === menuEl);
@@ -5570,34 +5569,14 @@
 
         var panel = buildPanel(groupId);
         content.appendChild(panel);
-        panel.style.display = 'block';
-        panel.style.position = 'relative';
-        panel.style.zIndex = '1';
-        panel.style.visibility = 'visible';
-        panel.style.opacity = '1';
         updateRateLimit(panel);
-
         return true;
     }
 
     function hidePanel() {
         state.open = false;
         if (state.rateTimer) { clearInterval(state.rateTimer); state.rateTimer = null; }
-
-        var panels = document.querySelectorAll('#' + PANEL_ID);
-        Array.prototype.forEach.call(panels, function (p) {
-            var parent = p.parentNode;
-            if (!parent) { p.remove(); return; }
-            Array.prototype.forEach.call(parent.children, function (c) {
-                if (c.classList && c.classList.contains(PANEL_CLASS)) return;
-                var prev = c.getAttribute('data-nx-prev-display');
-                if (prev === null) return;
-                c.style.display = prev;
-                c.removeAttribute('data-nx-prev-display');
-            });
-            p.remove();
-        });
-
+        removeAllPanels();
         state.contentEl = null;
     }
 
@@ -5608,6 +5587,18 @@
             }
         } catch (e) {}
         return (location.hash || '').replace(/^#/, '');
+    }
+
+    function setHash(value) {
+        try {
+            if (window.top && window.top !== window && window.top.location) {
+                if (value) window.top.location.hash = value;
+                else if (window.top.location.hash) window.top.location.hash = '';
+                return;
+            }
+        } catch (e) {}
+        if (value) location.hash = value;
+        else if (location.hash) location.hash = '';
     }
 
     function handleHash() {
@@ -5641,19 +5632,11 @@
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
                 e.stopImmediatePropagation();
-
-                try { window.top.location.hash = HASH; } catch (err) {}
-                try { location.hash = HASH; } catch (err) {}
-
+                setHash(HASH);
                 handleHash();
             }, true);
             menu.insertBefore(btn, a);
         }
-    }
-
-    function removeAllButtons() {
-        var buttons = document.querySelectorAll('a.' + BUTTON_CLASS);
-        Array.prototype.forEach.call(buttons, function (b) { b.remove(); });
     }
 
     function syncForPath() {
@@ -5661,49 +5644,35 @@
         if (state.lastPath === path) return;
         state.lastPath = path;
 
-        log('path changed →', path);
-
         removeAllPanels();
         removeAllButtons();
         state.open = false;
         state.contentEl = null;
         state.groupId = null;
 
-        if (currentHash() !== HASH) {
-            try { if (location.hash === '#' + HASH) location.hash = ''; } catch (e) {}
-        }
-
         addButton();
-    }
-
-    function shouldRun() {
-        var path = location.pathname;
-        var search = location.search;
-        if (/\/develop(\/|$)/.test(path)) return true;
-        if (/\/develop\/groups(\/|$)/.test(path)) return true;
-        if (search.indexOf('groupId=') > -1) return true;
-        try {
-            if (window.top && window.top !== window) {
-                var tp = window.top.location.pathname;
-                var ts = window.top.location.search;
-                if (/\/develop(\/|$)/.test(tp)) return true;
-                if (/\/develop\/groups(\/|$)/.test(tp)) return true;
-                if (ts.indexOf('groupId=') > -1) return true;
-            }
-        } catch (e) {}
-        return false;
     }
 
     function apply() {
         if (state.initialized) return;
         if (!isOn()) return;
-        if (!shouldRun()) return;
+
+        if (isTopWindow()) {
+            log('top window — delegating to iframe');
+            return;
+        }
+
+        var path = location.pathname;
+        if (!/\/develop(\/|$)/.test(path) && !/\/develop\/groups(\/|$)/.test(path)) {
+            log('not a develop iframe, skipping');
+            return;
+        }
 
         state.initialized = true;
+        log('applying in iframe at', path);
 
         style();
         syncForPath();
-        addButton();
         handleHash();
 
         state.topListener = function () { setTimeout(handleHash, 0); };
