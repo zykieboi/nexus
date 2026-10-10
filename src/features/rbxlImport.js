@@ -28,7 +28,8 @@
         topListener: null,
         selfListener: null,
         groupId: null,
-        initialized: false
+        initialized: false,
+        lastPath: null
     };
 
     var CLASS_TO_TYPE_ID = {
@@ -233,7 +234,9 @@
     }
 
     function style() {
-        if (document.getElementById(STYLE_ID)) return;
+        var existing = document.getElementById(STYLE_ID);
+        if (existing) existing.remove();
+
         var s = document.createElement('style');
         s.id = STYLE_ID;
         s.textContent = [
@@ -375,10 +378,6 @@
         ].join('');
         document.head.appendChild(s);
         syncTheme();
-        window.addEventListener('storage', function (e) {
-            if (e.key === THEME_KEY) syncTheme();
-        });
-        window.addEventListener('octane-theme-change', syncTheme);
     }
 
     function syncTheme() {
@@ -464,6 +463,12 @@
         var queryGroup = location.search.match(/[?&]groupId=(\d+)/);
         if (queryGroup) return queryGroup[1];
 
+        var activeTab = document.querySelector('#GroupCreationsTab.tab-active');
+        if (!activeTab) {
+            var tabLink = document.getElementById('GroupCreationsTabLink');
+            if (!tabLink || !tabLink.classList.contains('tab-active')) return null;
+        }
+
         var select = document.querySelector('#SelectedGroupId');
         if (select && select.value && /^\d+$/.test(select.value)) return select.value;
 
@@ -476,15 +481,6 @@
             if (gid && /^\d+$/.test(gid)) return gid;
         }
 
-        try {
-            if (window.top && window.top !== window) {
-                var topPath = window.top.location.pathname.match(/\/develop\/groups\/(\d+)/);
-                if (topPath) return topPath[1];
-                var topQuery = window.top.location.search.match(/[?&]groupId=(\d+)/);
-                if (topQuery) return topQuery[1];
-            }
-        } catch (e) {}
-
         return null;
     }
 
@@ -495,23 +491,6 @@
             var opt = select.options[select.selectedIndex];
             if (opt && opt.textContent) return opt.textContent.trim();
         }
-        var content = document.querySelector('.BuildPageContent[data-groupid="' + groupId + '"]');
-        if (content) {
-            var gsel = content.querySelector('#SelectedGroupId');
-            if (gsel) {
-                var o = gsel.options[gsel.selectedIndex];
-                if (o && o.textContent) return o.textContent.trim();
-            }
-        }
-        try {
-            if (window.top && window.top !== window) {
-                var topSel = window.top.document.querySelector('#SelectedGroupId');
-                if (topSel && topSel.value === String(groupId)) {
-                    var topOpt = topSel.options[topSel.selectedIndex];
-                    if (topOpt && topOpt.textContent) return topOpt.textContent.trim();
-                }
-            }
-        } catch (e) {}
         return 'Group ' + groupId;
     }
 
@@ -559,16 +538,12 @@
             return sendUpload(file, filename, typeId, token, groupId, safeName);
         }).then(function (result) {
             if (result.status === 403 && result.fresh) {
-                log('retrying with fresh token from response');
                 saveCsrf(result.fresh);
                 return sendUpload(file, filename, typeId, result.fresh, groupId, safeName);
             }
             if (result.status === 403) {
                 var cached = readCsrf();
-                if (cached) {
-                    log('retrying with cached token');
-                    return sendUpload(file, filename, typeId, cached, groupId, safeName);
-                }
+                if (cached) return sendUpload(file, filename, typeId, cached, groupId, safeName);
             }
             return result;
         });
@@ -590,8 +565,6 @@
         var token = readCsrf();
         if (token) headers['x-csrf-token'] = token;
 
-        log('rename →', { id: assetId, name: name, group: groupId || '(personal)' });
-
         return fetch(url, {
             method: 'PATCH',
             credentials: 'include',
@@ -600,22 +573,19 @@
         }).then(function (r) {
             return r.text().then(function (text) {
                 var fresh = r.headers.get('x-csrf-token') || '';
-                log('rename ←', r.status, text, '| fresh token:', fresh || '(none)');
                 if (r.status === 403 && fresh) {
                     saveCsrf(fresh);
-                    var retryHeaders = {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        'x-csrf-token': fresh
-                    };
                     return fetch(url, {
                         method: 'PATCH',
                         credentials: 'include',
-                        headers: retryHeaders,
+                        headers: {
+                            'accept': 'application/json, text/plain, */*',
+                            'content-type': 'application/json',
+                            'x-csrf-token': fresh
+                        },
                         body: body
                     }).then(function (r2) {
                         return r2.text().then(function (text2) {
-                            log('rename ← (retry)', r2.status, text2);
                             return { status: r2.status, text: text2 };
                         });
                     });
@@ -630,7 +600,7 @@
         if (groupId) {
             return '<div class="nx-context">Uploading as <strong>' + name + '</strong> (group ' + groupId + ')</div>';
         }
-        return '<div class="nx-context">Uploading as <strong>' + name + '</strong> (personal)</div>';
+        return '<div class="nx-context">Uploading as <strong>Personal</strong></div>';
     }
 
     function panelHtml(groupId) {
@@ -789,10 +759,7 @@
     }
 
     function startUpload(panel) {
-        if (state.busy) {
-            log('upload already running');
-            return;
-        }
+        if (state.busy) return;
 
         var urlInput = panel.querySelector('#nx-rblx-url');
         var nameInput = panel.querySelector('#nx-rblx-name');
@@ -817,7 +784,7 @@
         var assetId = assetIdFromUrl(url);
         if (!assetId) return setStatus(status, 'Could not find an asset ID in that URL.', 'err');
 
-        var groupId = state.groupId;
+        var groupId = detectGroupContext();
 
         state.busy = true;
         setRateLimitNow();
@@ -831,7 +798,6 @@
 
         httpGet('https://api.coolpixels.net/roblox/assetdelivery/' + assetId + '/info')
             .then(function (infoRes) {
-                log('info status', infoRes.status);
                 if (infoRes.status !== 200) throw new Error('info returned HTTP ' + infoRes.status);
                 var info;
                 try { info = JSON.parse(infoRes.responseText); }
@@ -839,7 +805,6 @@
                 if (!info.success || !info.content) throw new Error('asset info did not include content');
                 var parsed = readItemXml(info.content);
                 if (!parsed) throw new Error('asset XML was not recognized');
-                log('parsed', parsed);
                 return parsed;
             })
             .then(function (parsed) {
@@ -851,7 +816,6 @@
                 if (!typeId) {
                     typeId = String(parsed.typeId);
                     selectType(panel, typeId);
-                    log('auto-picked type', typeId);
                 }
 
                 setProgress(panel, 25, 'Loading details…');
@@ -870,7 +834,6 @@
                 setProgress(panel, 45, 'Downloading texture…');
                 return httpGet('https://api.coolpixels.net/roblox/assetdelivery/' + parsed.templateId, { blob: true })
                     .then(function (imgRes) {
-                        log('image status', imgRes.status);
                         if (imgRes.status !== 200) throw new Error('image download returned HTTP ' + imgRes.status);
                         var blob = imgRes.response;
                         if (!blob || !blob.size) throw new Error('image download was empty');
@@ -889,14 +852,11 @@
 
                 var rawName = (nameInput.value || '').trim();
                 var finalName = cleanName(rawName) || 'Clothing';
-                if (finalName !== rawName) {
-                    nameInput.value = finalName;
-                    log('cleaned name', rawName, '→', finalName);
-                }
+                if (finalName !== rawName) nameInput.value = finalName;
 
                 var file = new File([ctx.blob], finalName + '.png', { type: ctx.blob.type || 'image/png' });
                 return uploadAsset(file, typeId, finalName, groupId).then(function (upRes) {
-                    return { up: upRes, parsed: ctx.parsed, finalName: finalName };
+                    return { up: upRes, parsed: ctx.parsed, finalName: finalName, groupId: groupId };
                 });
             })
             .then(function (ctx) {
@@ -906,22 +866,21 @@
 
                 var out = ctx.up.data || {};
                 var newId = out.assetId || out.AssetId || out.id;
-
                 var serverName = out.name || out.Name || '';
+
                 if (newId && ctx.finalName && (!serverName || serverName !== ctx.finalName)) {
                     setProgress(panel, 88, 'Saving name…');
-                    return renameAsset(newId, ctx.finalName, typeId, groupId).then(function (res) {
-                        if (res.status !== 200) log('rename failed', res.status, res.text);
-                        return { out: out, newId: newId, finalName: ctx.finalName };
+                    return renameAsset(newId, ctx.finalName, typeId, ctx.groupId).then(function (res) {
+                        return { out: out, newId: newId, finalName: ctx.finalName, groupId: ctx.groupId };
                     });
                 }
-                return { out: out, newId: newId, finalName: ctx.finalName };
+                return { out: out, newId: newId, finalName: ctx.finalName, groupId: ctx.groupId };
             })
             .then(function (done) {
                 setProgress(panel, 100, 'Done');
 
                 var lines = ['Imported successfully'];
-                if (groupId) lines.push('Group: ' + groupNameFor(groupId) + ' (' + groupId + ')');
+                if (done.groupId) lines.push('Group: ' + groupNameFor(done.groupId) + ' (' + done.groupId + ')');
                 else lines.push('Uploaded to: Personal');
                 lines.push('Name: ' + done.finalName);
                 lines.push('Asset ID: ' + (done.newId || '?'));
@@ -985,7 +944,17 @@
         return candidates.length ? candidates[0] : null;
     }
 
+    function removeAllPanels() {
+        var panels = document.querySelectorAll('#' + PANEL_ID);
+        Array.prototype.forEach.call(panels, function (p) { p.remove(); });
+
+        var oldPanels = document.querySelectorAll('.' + PANEL_CLASS);
+        Array.prototype.forEach.call(oldPanels, function (p) { p.remove(); });
+    }
+
     function showPanel(menuEl) {
+        removeAllPanels();
+
         menuEl = menuEl || pickVisibleMenu();
         if (!menuEl) {
             log('no visible View=11 menu found');
@@ -998,11 +967,13 @@
             return false;
         }
 
-        log('showPanel: content area =', content);
-
         state.open = true;
         state.contentEl = content;
-        state.groupId = detectGroupContext();
+
+        var groupId = detectGroupContext();
+        state.groupId = groupId;
+
+        log('showPanel: content area =', content, '| groupId =', groupId || '(personal)');
 
         Array.prototype.forEach.call(document.querySelectorAll('a.tab-item'), function (a) {
             a.classList.toggle('tab-item-selected', a === menuEl);
@@ -1015,10 +986,7 @@
             c.style.display = 'none';
         });
 
-        var panel = document.getElementById(PANEL_ID);
-        if (panel) panel.remove();
-
-        panel = buildPanel(state.groupId);
+        var panel = buildPanel(groupId);
         content.appendChild(panel);
         panel.style.display = 'block';
         panel.style.position = 'relative';
@@ -1027,7 +995,6 @@
         panel.style.opacity = '1';
         updateRateLimit(panel);
 
-        log('panel appended, content children now:', content.children.length);
         return true;
     }
 
@@ -1035,19 +1002,21 @@
         state.open = false;
         if (state.rateTimer) { clearInterval(state.rateTimer); state.rateTimer = null; }
 
-        var content = state.contentEl || document.querySelector('td.content-area');
-        if (!content) return;
-
-        var panel = content.querySelector('#' + PANEL_ID);
-        if (panel) panel.style.display = 'none';
-
-        Array.prototype.forEach.call(content.children, function (c) {
-            if (c.classList && c.classList.contains(PANEL_CLASS)) return;
-            var prev = c.getAttribute('data-nx-prev-display');
-            if (prev === null) return;
-            c.style.display = prev;
-            c.removeAttribute('data-nx-prev-display');
+        var panels = document.querySelectorAll('#' + PANEL_ID);
+        Array.prototype.forEach.call(panels, function (p) {
+            var parent = p.parentNode;
+            if (!parent) { p.remove(); return; }
+            Array.prototype.forEach.call(parent.children, function (c) {
+                if (c.classList && c.classList.contains(PANEL_CLASS)) return;
+                var prev = c.getAttribute('data-nx-prev-display');
+                if (prev === null) return;
+                c.style.display = prev;
+                c.removeAttribute('data-nx-prev-display');
+            });
+            p.remove();
         });
+
+        state.contentEl = null;
     }
 
     function currentHash() {
@@ -1065,18 +1034,11 @@
             if (state.open) hidePanel();
             return;
         }
-        if (state.open) {
-            log('handleHash: already open');
-            return;
-        }
+        if (state.open) return;
 
         var btn = document.querySelector('a.' + BUTTON_CLASS);
-        if (!btn) {
-            log('handleHash: no button yet');
-            return;
-        }
+        if (!btn) return;
         if (showPanel(btn)) log('panel opened');
-        else log('panel failed to open');
     }
 
     function addButton() {
@@ -1104,8 +1066,32 @@
                 handleHash();
             }, true);
             menu.insertBefore(btn, a);
-            log('button injected next to', a, 'in', menu);
         }
+    }
+
+    function removeAllButtons() {
+        var buttons = document.querySelectorAll('a.' + BUTTON_CLASS);
+        Array.prototype.forEach.call(buttons, function (b) { b.remove(); });
+    }
+
+    function syncForPath() {
+        var path = location.pathname + location.search;
+        if (state.lastPath === path) return;
+        state.lastPath = path;
+
+        log('path changed →', path);
+
+        removeAllPanels();
+        removeAllButtons();
+        state.open = false;
+        state.contentEl = null;
+        state.groupId = null;
+
+        if (currentHash() !== HASH) {
+            try { if (location.hash === '#' + HASH) location.hash = ''; } catch (e) {}
+        }
+
+        addButton();
     }
 
     function shouldRun() {
@@ -1134,6 +1120,7 @@
         state.initialized = true;
 
         style();
+        syncForPath();
         addButton();
         handleHash();
 
@@ -1147,6 +1134,7 @@
 
         state.observer = new MutationObserver(function () {
             if (!state.initialized) return;
+            syncForPath();
             addButton();
             if (currentHash() === HASH && !state.open) handleHash();
             else if (currentHash() !== HASH && state.open) hidePanel();
@@ -1163,12 +1151,8 @@
         } catch (e) {}
         if (state.selfListener) window.removeEventListener('hashchange', state.selfListener);
 
-        hidePanel();
-
-        Array.prototype.forEach.call(document.querySelectorAll('a.' + BUTTON_CLASS), function (b) { b.remove(); });
-
-        var panel = document.getElementById(PANEL_ID);
-        if (panel) panel.remove();
+        removeAllPanels();
+        removeAllButtons();
 
         var s = document.getElementById(STYLE_ID);
         if (s) s.remove();
@@ -1179,6 +1163,9 @@
         if (state.blobUrl) { URL.revokeObjectURL(state.blobUrl); state.blobUrl = null; }
 
         state.initialized = false;
+        state.lastPath = null;
+        state.open = false;
+        state.groupId = null;
     }
 
     window.NX.features.rbxlImport = {
