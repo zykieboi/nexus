@@ -26,7 +26,8 @@
         contentEl: null,
         observer: null,
         topListener: null,
-        selfListener: null
+        selfListener: null,
+        groupId: null
     };
 
     var CLASS_TO_TYPE_ID = {
@@ -194,7 +195,9 @@
             '#' + PANEL_ID + ' .nx-status.ok{background:#0d2e1d;color:#8fd9b3;border-left-color:#00b06f}',
             '#' + PANEL_ID + ' .nx-status.err{background:#2e1414;color:#e0a0a0;border-left-color:#c4494a}',
             '#' + PANEL_ID + ' .nx-status.info{background:#132a3d;color:#8fbce0;border-left-color:#4a90c4}',
-            '#' + PANEL_ID + ' .nx-row-item{border-bottom-color:#2c2e30}'
+            '#' + PANEL_ID + ' .nx-row-item{border-bottom-color:#2c2e30}',
+            '#' + PANEL_ID + ' .nx-context{background:#16181a;border-color:#2b2d2f;color:#bdbebe}',
+            '#' + PANEL_ID + ' .nx-context strong{color:#fff}'
         ].join('');
     }
 
@@ -221,7 +224,9 @@
             '#' + PANEL_ID + ' .nx-status.ok{background:#e3f7eb;color:#0d7a3f;border-left-color:#00a04e}',
             '#' + PANEL_ID + ' .nx-status.err{background:#fbe8e8;color:#a13a3a;border-left-color:#d05656}',
             '#' + PANEL_ID + ' .nx-status.info{background:#e6f0f9;color:#2e5f8a;border-left-color:#4a90c4}',
-            '#' + PANEL_ID + ' .nx-row-item{border-bottom-color:#eef0f2}'
+            '#' + PANEL_ID + ' .nx-row-item{border-bottom-color:#eef0f2}',
+            '#' + PANEL_ID + ' .nx-context{background:#f2f4f5;border-color:#c7cbce;color:#333}',
+            '#' + PANEL_ID + ' .nx-context strong{color:#232527}'
         ].join('');
     }
 
@@ -266,6 +271,12 @@
             '#' + PANEL_ID + ' .nx-hint a:hover{text-decoration:underline}',
 
             '#' + PANEL_ID + ' .nx-line{margin:10px 0 22px;font-size:14px;line-height:20px}',
+
+            '#' + PANEL_ID + ' .nx-context{',
+            '  margin:0 0 18px;padding:10px 14px;border:1px solid;border-radius:6px;',
+            '  font-size:13px;line-height:18px;',
+            '}',
+            '#' + PANEL_ID + ' .nx-context strong{font-weight:600}',
 
             '#' + PANEL_ID + ' .nx-row-item{',
             '  display:flex;align-items:flex-start;justify-content:space-between;',
@@ -440,20 +451,54 @@
         return cleanName(slug);
     }
 
-    function currentGroupId() {
-        var m = location.pathname.match(/\/develop\/groups\/(\d+)/);
-        if (m) return m[1];
-        m = location.search.match(/[?&]groupId=(\d+)/);
-        if (m) return m[1];
-        return '';
+    function detectGroupContext() {
+        var pathGroup = location.pathname.match(/\/develop\/groups\/(\d+)/);
+        if (pathGroup) return pathGroup[1];
+
+        var queryGroup = location.search.match(/[?&]groupId=(\d+)/);
+        if (queryGroup) return queryGroup[1];
+
+        var select = document.querySelector('#SelectedGroupId');
+        if (select && select.value && /^\d+$/.test(select.value)) return select.value;
+
+        var hidden = document.querySelector('#groupId');
+        if (hidden && hidden.value && /^\d+$/.test(hidden.value)) return hidden.value;
+
+        var content = document.querySelector('.BuildPageContent[data-groupid]');
+        if (content) {
+            var gid = content.getAttribute('data-groupid');
+            if (gid && /^\d+$/.test(gid)) return gid;
+        }
+
+        return null;
     }
 
-    function sendUpload(file, filename, typeId, token, groupId) {
+    function groupNameFor(groupId) {
+        if (!groupId) return 'Personal';
+        var select = document.querySelector('#SelectedGroupId');
+        if (select && select.value === String(groupId)) {
+            var opt = select.options[select.selectedIndex];
+            if (opt && opt.textContent) return opt.textContent.trim();
+        }
+        var content = document.querySelector('.BuildPageContent[data-groupid="' + groupId + '"]');
+        if (content) {
+            var gsel = content.querySelector('#SelectedGroupId');
+            if (gsel) {
+                var o = gsel.options[gsel.selectedIndex];
+                if (o && o.textContent) return o.textContent.trim();
+            }
+        }
+        return 'Group ' + groupId;
+    }
+
+    function sendUpload(file, filename, typeId, token, groupId, assetName) {
         var form = new FormData();
-        form.append('file', file, filename);
+        form.append('name', String(assetName || 'clothing'));
         form.append('assetType', String(typeId));
-        form.append('name', 'upload');
-        if (groupId) form.append('groupId', String(groupId));
+        form.append('file', file, filename);
+        if (groupId && /^\d+$/.test(groupId)) {
+            form.append('groupId', String(groupId));
+        }
 
         var headers = {};
         if (token) headers['x-csrf-token'] = token;
@@ -462,7 +507,8 @@
             token: token || '(empty)',
             type: typeId,
             file: filename,
-            group: groupId || '(none)'
+            name: assetName,
+            group: groupId || '(personal)'
         });
 
         return fetch('https://octane.wtf/develop/upload', {
@@ -476,37 +522,36 @@
                 log('upload ←', r.status, text, '| fresh token:', fresh || '(none)');
                 var data;
                 try { data = JSON.parse(text); } catch (e) { data = { raw: text }; }
-                return { status: r.status, data: data, raw: text, fresh: fresh };
+                return { status: r.status, data: data, raw: text, fresh: fresh, groupId: groupId };
             });
         });
     }
 
-    function uploadAsset(file, typeId, name) {
+    function uploadAsset(file, typeId, name, groupId) {
         var safeName = (name || 'clothing').replace(/[\\/:*?"<>|]/g, '').trim() || 'clothing';
         var filename = safeName + '.png';
-        var groupId = currentGroupId();
 
         return waitForCsrf(3000).then(function (token) {
-            return sendUpload(file, filename, typeId, token, groupId);
+            return sendUpload(file, filename, typeId, token, groupId, safeName);
         }).then(function (result) {
             if (result.status === 403 && result.fresh) {
                 log('retrying with fresh token from response');
                 saveCsrf(result.fresh);
-                return sendUpload(file, filename, typeId, result.fresh, groupId);
+                return sendUpload(file, filename, typeId, result.fresh, groupId, safeName);
             }
             if (result.status === 403) {
                 var cached = readCsrf();
                 if (cached) {
                     log('retrying with cached token');
-                    return sendUpload(file, filename, typeId, cached, groupId);
+                    return sendUpload(file, filename, typeId, cached, groupId, safeName);
                 }
             }
             return result;
         });
     }
 
-    function renameAsset(assetId, name, typeId) {
-        var url = 'https://octane.wtf/apisite/develop/v1/assets/' + assetId;
+    function renameAsset(assetId, name, typeId, groupId) {
+        var url = 'https://octane.wtf/apisite/develop/v1/assets/' + assetId + (groupId ? '?groupId=' + encodeURIComponent(groupId) : '');
         var body = JSON.stringify({
             name: name,
             description: '',
@@ -521,7 +566,7 @@
         var token = readCsrf();
         if (token) headers['x-csrf-token'] = token;
 
-        log('rename →', { id: assetId, name: name });
+        log('rename →', { id: assetId, name: name, group: groupId || '(personal)' });
 
         return fetch(url, {
             method: 'PATCH',
@@ -556,11 +601,21 @@
         });
     }
 
-    function panelHtml() {
+    function contextHtml(groupId) {
+        var name = groupNameFor(groupId);
+        if (groupId) {
+            return '<div class="nx-context">Uploading as <strong>' + name + '</strong> (group ' + groupId + ')</div>';
+        }
+        return '<div class="nx-context">Uploading as <strong>' + name + '</strong> (personal)</div>';
+    }
+
+    function panelHtml(groupId) {
         return [
             '<h2 class="nx-title">Import from RBLX</h2>',
             '<span class="nx-hint">Don\'t know how? <a href="https://developer.roblox.com/articles/How-to-Make-Shirts-and-Pants-for-Roblox-Characters" target="_blank">Click here</a></span>',
             '<p class="nx-line">Paste a Roblox clothing link and we\'ll import it.</p>',
+
+            contextHtml(groupId),
 
             '<div class="nx-row-item">',
             '  <div class="nx-row-text">',
@@ -681,11 +736,11 @@
         state.rateTimer = setInterval(tick, 500);
     }
 
-    function buildPanel() {
+    function buildPanel(groupId) {
         var panel = document.createElement('div');
         panel.id = PANEL_ID;
         panel.className = PANEL_CLASS;
-        panel.innerHTML = panelHtml();
+        panel.innerHTML = panelHtml(groupId);
 
         Array.prototype.forEach.call(panel.querySelectorAll('#nx-rblx-types label'), function (l) {
             l.addEventListener('click', function () {
@@ -738,13 +793,15 @@
         var assetId = assetIdFromUrl(url);
         if (!assetId) return setStatus(status, 'Could not find an asset ID in that URL.', 'err');
 
+        var groupId = state.groupId;
+
         state.busy = true;
         setRateLimitNow();
         goBtn.disabled = true;
 
         setStatus(status, 'Reading asset…', 'info');
         setProgress(panel, 5, 'Reading asset…');
-        log('start', { url: url, assetId: assetId });
+        log('start', { url: url, assetId: assetId, group: groupId || '(personal)' });
 
         var typeId = getSelectedType(panel);
 
@@ -814,7 +871,7 @@
                 }
 
                 var file = new File([ctx.blob], finalName + '.png', { type: ctx.blob.type || 'image/png' });
-                return uploadAsset(file, typeId, finalName).then(function (upRes) {
+                return uploadAsset(file, typeId, finalName, groupId).then(function (upRes) {
                     return { up: upRes, parsed: ctx.parsed, finalName: finalName };
                 });
             })
@@ -824,12 +881,12 @@
                 }
 
                 var out = ctx.up.data || {};
-                var newId = out.assetId;
+                var newId = out.assetId || out.AssetId || out.id;
 
                 var serverName = out.name || out.Name || '';
                 if (newId && ctx.finalName && (!serverName || serverName !== ctx.finalName)) {
                     setProgress(panel, 88, 'Saving name…');
-                    return renameAsset(newId, ctx.finalName, typeId).then(function (res) {
+                    return renameAsset(newId, ctx.finalName, typeId, groupId).then(function (res) {
                         if (res.status !== 200) log('rename failed', res.status, res.text);
                         return { out: out, newId: newId, finalName: ctx.finalName };
                     });
@@ -840,6 +897,8 @@
                 setProgress(panel, 100, 'Done');
 
                 var lines = ['Imported successfully'];
+                if (groupId) lines.push('Group: ' + groupNameFor(groupId) + ' (' + groupId + ')');
+                else lines.push('Uploaded to: Personal');
                 lines.push('Name: ' + done.finalName);
                 lines.push('Asset ID: ' + (done.newId || '?'));
                 if (done.out.moderationStatus) lines.push('Status: ' + done.out.moderationStatus);
@@ -887,6 +946,7 @@
 
         state.open = true;
         state.contentEl = content;
+        state.groupId = detectGroupContext();
 
         Array.prototype.forEach.call(document.querySelectorAll('a.tab-item'), function (a) {
             a.classList.toggle('tab-item-selected', a === menuEl);
@@ -900,10 +960,10 @@
         });
 
         var panel = document.getElementById(PANEL_ID);
-        if (!panel || panel.parentNode !== content) {
-            panel = buildPanel();
-            content.appendChild(panel);
-        }
+        if (panel) panel.remove();
+
+        panel = buildPanel(state.groupId);
+        content.appendChild(panel);
         panel.style.display = '';
         updateRateLimit(panel);
         return true;
@@ -962,7 +1022,7 @@
 
             var btn = document.createElement('a');
             btn.className = 'tab-item ' + BUTTON_CLASS;
-            btn.href = '#';
+            btn.href = '#' + HASH;
             btn.textContent = 'Import from RBLX';
             btn.addEventListener('click', function (e) {
                 e.preventDefault();
